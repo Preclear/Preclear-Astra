@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript / Vite build cache
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Env and logs
+.env
+.env.*
+*.log
+
+# Cursor rules (local only)
+.cursor/rules/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+.DS_Store
