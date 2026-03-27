@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 type HeaderProps = {
   variant?: 'light' | 'dark';
@@ -34,9 +35,9 @@ export default function Header({ variant = 'light' }: HeaderProps) {
           <a href="#" className="site-header__link site-header__link--secondary">
             Sign In
           </a>
-          <a href="#" className="site-header__link site-header__link--primary">
+          <Link to="/sign-up" className="site-header__link site-header__link--primary">
             Sign Up
-          </a>
+          </Link>
         </div>
       </div>
     </header>
