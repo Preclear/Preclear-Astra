@@ -14,18 +14,18 @@ export default function Header({ variant = 'light' }: HeaderProps) {
         </p>
       </div>
       <div className="site-header__inner">
-        <div className="site-header__brand">
+        <Link to="/" className="site-header__brand">
           <img
             src={isDark ? '/images/Logo/PCBlackLogo.png' : '/images/Logo/PCWhiteLogo.png'}
             alt="PreClear logo"
             className="site-header__logo"
           />
           <span className="site-header__brand-text">PreClear</span>
-        </div>
+        </Link>
         <nav className="site-header__nav">
-          <a href="/how-it-works" className="site-header__link site-header__link--featured">
+          <Link to="/how-it-works" className="site-header__link site-header__link--featured">
             How It Works
-          </a>
+          </Link>
           <a href="#" className="site-header__link">Pricing</a>
           <a href="#" className="site-header__link">Features</a>
           <a href="#" className="site-header__link">Guides</a>

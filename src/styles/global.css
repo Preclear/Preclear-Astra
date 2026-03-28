@@ -124,6 +124,11 @@ body {
   align-items: center;
   gap: 0.4rem;
   color: #e5e7eb;
+  text-decoration: none;
+}
+
+.site-header__brand:visited {
+  color: inherit;
 }
 
 .site-header__logo {
