@@ -1,13 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+const url = import.meta.env.VITE_SUPABASE_URL?.trim() ?? '';
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '';
 
-if (!url || !anonKey) {
-  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
-}
+export const isSupabaseConfigured = Boolean(url && anonKey);
 
 export const supabaseUrl = url;
 export const supabaseAnonKey = anonKey;
 
-export const supabase = createClient(url, anonKey);
+/** Null when env vars are missing (e.g. local preview without .env). */
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(url, anonKey)
+  : null;

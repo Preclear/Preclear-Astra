@@ -1,7 +1,14 @@
 import { FormEvent, useState } from 'react';
-import { supabase, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
+import {
+  isSupabaseConfigured,
+  supabase,
+  supabaseAnonKey,
+  supabaseUrl,
+} from '../lib/supabase';
 
-const EMAIL_SIGNUP_URL = `${supabaseUrl}/functions/v1/email-signup`;
+const emailSignupUrl = isSupabaseConfigured
+  ? `${supabaseUrl}/functions/v1/email-signup`
+  : '';
 
 const PASSWORD_HINT =
   'Use 10–72 characters with upper and lower case, a number, and a symbol.';
@@ -30,9 +37,14 @@ export default function SignUpPage() {
       return;
     }
 
+    if (!isSupabaseConfigured) {
+      setEmailError('Sign-up is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+      return;
+    }
+
     setEmailSubmitting(true);
     try {
-      const response = await fetch(EMAIL_SIGNUP_URL, {
+      const response = await fetch(emailSignupUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,6 +84,12 @@ export default function SignUpPage() {
 
   const handleGoogleSignUp = async () => {
     setGoogleError(null);
+    if (!supabase) {
+      setGoogleError(
+        'Sign-up is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the deployment.',
+      );
+      return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -90,6 +108,25 @@ export default function SignUpPage() {
   return (
     <section style={{ maxWidth: 420, margin: '64px auto', padding: '0 16px' }}>
       <h1 style={{ marginBottom: 8 }}>Create account</h1>
+      {!isSupabaseConfigured ? (
+        <p
+          style={{
+            margin: '0 0 16px',
+            padding: 12,
+            borderRadius: 8,
+            background: '#fef3c7',
+            color: '#92400e',
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+          role="status"
+        >
+          Authentication is not configured for this environment. For production, set{' '}
+          <code style={{ fontSize: 12 }}>VITE_SUPABASE_URL</code> and{' '}
+          <code style={{ fontSize: 12 }}>VITE_SUPABASE_ANON_KEY</code> in Vercel → Project → Settings →
+          Environment Variables, then redeploy.
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={handleGoogleSignUp}
