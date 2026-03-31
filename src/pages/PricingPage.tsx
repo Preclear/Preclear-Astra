@@ -207,7 +207,6 @@ export default function PricingPage() {
                 </div>
                 <div className="pricing-compare__cell">
                   {row.pro.type === 'dot' && <span className="pricing-compare__dot" aria-hidden />}
-                  {row.pro.type === 'dash' && <span className="pricing-compare__dash" aria-hidden />}
                   {row.pro.type === 'text' && row.pro.text}
                   {row.pro.type === 'muted-text' && <span className="pricing-compare__muted">{row.pro.text}</span>}
                   {row.pro.type === 'dot-text' && (
