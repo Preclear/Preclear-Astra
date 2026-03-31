@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { paths } from '../../routes';
 
 export default function Footer() {
   const [email, setEmail] = useState('');
@@ -10,7 +12,8 @@ export default function Footer() {
 
           <div className="site-footer__col">
             <p className="site-footer__col-heading">PRODUCT</p>
-            <a href="#" className="site-footer__link">Overview</a>
+            <Link to={paths.product} className="site-footer__link">Overview</Link>
+            <Link to={paths.howItWorks} className="site-footer__link">How it works</Link>
             <a href="#" className="site-footer__link">Consumers</a>
             <a href="#" className="site-footer__link">Enterprise</a>
             <a href="#" className="site-footer__link">Platform</a>

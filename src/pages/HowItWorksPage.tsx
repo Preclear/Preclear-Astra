@@ -1,593 +1,761 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { paths } from '../routes';
 
-const LOGOS = [1, 2, 3, 4, 5, 6, 7, 8];
+const DEMO_ADDRESS = '123 Main St, Baltimore, MD 21201';
 
-const PAIN_POINTS = [
-  'You are digging through county websites trying to figure out if your project needs a permit.',
-  'You are not sure what documents, drawings, or forms your city requires before submitting.',
-  'You start a project and only later discover zoning rules or inspection requirements you did not know about.',
-];
-
-/** Matches FAQ accordion order — cardA … cardD in /images/howItWorks/cards/ */
-const FAQ_CARD_IMAGES = [
-  '/images/howItWorks/cards/cardA.png',
-  '/images/howItWorks/cards/cardB.png',
-  '/images/howItWorks/cards/cardC.png',
-  '/images/howItWorks/cards/cardD.png',
+const PROJECT_OPTIONS = [
+  'Deck',
+  'Room Addition',
+  'Kitchen Remodel',
+  'Fence',
+  'ADU / Guest House',
+  'Window Replacement',
 ] as const;
 
-
-
-const PRICING_STARTER_FEATURES = [
-  '3 permit pre-checks per month',
-  'Instant yes/no permit determination',
-  'Basic county lookup (50+ jurisdictions)',
-  'Downloadable PDF checklist',
-  'Email support',
+/* Frame 3 — deep results panel */
+const CHECKS = [
+  { label: 'Location identified',      detail: 'Baltimore City, MD'   },
+  { label: 'Zoning rules loaded',      detail: 'R-6 Residential Zone' },
+  { label: 'Permit triggers detected', detail: '3 requirements found' },
+  { label: 'Code checks complete',     detail: 'IBC 2021 applied'     },
 ] as const;
 
-const PRICING_PRO_FEATURES = [
-  'Unlimited permit pre-checks',
-  'Full threshold question analysis',
-  'Jurisdiction auto-detection',
-  'Auto-filled permit application forms',
-  'Inspection prep guide per project',
-  'Code citation with every result',
-  'API access for integrations',
-  'Priority email support (next business day)',
-  'Project history saved',
+const HIW4_DOCS = [
+  'Site plan',
+  'Structural drawings',
+  'Permit application form',
+  'Lot survey / plat',
 ] as const;
 
-const SATISFIED_CUSTOMERS: {
-  label: string;
-  description: string;
-  stat: string;
-  name: string;
-}[] = [
-  {
-    label: 'On-time payments',
-    description:
-      'Teams that switched to PreClear report faster quoting cycles and fewer back-and-forth revisions with jurisdictions.',
-    stat: '76%',
-    name: 'Sarah B. James',
-  },
-  {
-    label: 'Quote turnaround',
-    description:
-      'Average time from project intake to a shareable permit summary, based on internal beta cohort data.',
-    stat: '4x',
-    name: 'Marcus T. Chen',
-  },
-  {
-    label: 'Support satisfaction',
-    description:
-      'Weighted score from post-session surveys where users rated clarity of requirements and next steps.',
-    stat: '5.0',
-    name: 'Elena V. Ruiz',
-  },
-  {
-    label: 'First-pass completeness',
-    description:
-      'Share of pre-checks that surfaced every required document for the selected scope before filing.',
-    stat: '68%',
-    name: 'Jordan K. Patel',
-  },
-  {
-    label: 'Hours saved',
-    description:
-      'Self-reported median weekly time reclaimed by replacing manual county site research with PreClear.',
-    stat: '12 hrs',
-    name: 'Alex D. Morgan',
-  },
-  {
-    label: 'Jurisdictions covered',
-    description:
-      'Active lookup templates and rule packs available for county and municipal permit pre-checks.',
-    stat: '50+',
-    name: 'Riley N. Foster',
-  },
-  {
-    label: 'Renewal retention',
-    description:
-      'Professional plan accounts that renewed after the first 90 days during pilot programs.',
-    stat: '92%',
-    name: 'Taylor S. Brooks',
-  },
-];
-
-const FAQS = [
-  {
-    q: 'What is a permit pre-check?',
-    a: 'A permit pre-check reviews your project scope, address, and property type against local zoning rules and building codes before you submit. It helps catch problems early and ensures your application is complete.',
-  },
-  {
-    q: 'What documents do I need?',
-    a: 'Documents vary by project type. Common requirements include site plans, floor plans, contractor licenses, and proof of ownership. PreClear lists exactly what your jurisdiction requires.',
-  },
-  {
-    q: 'Will my project pass inspection?',
-    a: 'We flag known code conflicts and zoning issues before submission so you can resolve them upfront rather than after a failed inspection.',
-  },
-  {
-    q: 'Stop checking permits the old way.',
-    a: 'Most homeowners spend hours on county websites only to get rejected on technicalities. PreClear automates the entire compliance lookup in minutes.',
-  },
-];
-
-const COMMON_QUESTIONS = [
-  {
-    q: 'What is a permit compliance pre-check?',
-    a: 'A pre-check reviews your project details — scope, address, and type — against local zoning codes, building codes, and permit requirements before you submit. It helps you catch problems early and submit complete applications.',
-  },
-  {
-    q: 'Which jurisdictions do you support?',
-    a: 'We cover 50+ counties and municipalities today, with new jurisdictions added regularly. Enter your address in PreClear to confirm support for your property.',
-  },
-  {
-    q: 'Is this a substitute for a licensed architect or permit expediter?',
-    a: 'No. PreClear is decision-support software. Licensed architects, engineers, and expediters still prepare official drawings and shepherd filings where your jurisdiction requires stamped plans or representation.',
-  },
-  {
-    q: 'How accurate is the code conflict detection?',
-    a: 'We flag likely issues from published codes and zoning layers you provide. Accuracy depends on current municipal data and how precisely you describe the project. Always confirm final interpretations with your local authority.',
-  },
-  {
-    q: 'Can I export my pre-check results?',
-    a: 'Yes. Paid plans include exportable summaries and PDF checklists you can attach to permit packages or share with contractors and consultants.',
-  },
+const HIW4_FLAGS = [
+  'Setback requirement applies',
+  'Inspection required after framing',
 ] as const;
+
+const HIW4_CODES = [
+  'IBC 2021 Section XYZ',
+  'Local zoning ordinance',
+] as const;
+
+/** Decorative PNGs — `/public/images/howItWorks/ObjAsset` (F2: 3, F3: 2, F4: 3) */
+const HIW_OBJ = '/images/howItWorks/ObjAsset' as const;
+// Map slots: ladder left; toolbox + blueprint stacked on right (top / bottom).
+const HIW_FRAME2_OBJ = [
+  `${HIW_OBJ}/Ladder.png`,
+  `${HIW_OBJ}/Toolbox.png`,
+  `${HIW_OBJ}/Blueprint.png`,
+] as const;
+const HIW_FRAME3_OBJ = [
+  `${HIW_OBJ}/Drill.png`,
+  `${HIW_OBJ}/Hammer.png`,
+] as const;
+const HIW_FRAME4_OBJ = [
+  `${HIW_OBJ}/Hardhat.png`,
+  `${HIW_OBJ}/Wrench.png`,
+  `${HIW_OBJ}/Yellowtape.png`,
+] as const;
+
+type Phase = 'idle' | 'typing' | 'typed' | 'dropdown' | 'selected' | 'cta';
 
 export default function HowItWorksPage() {
-  const [openFaq, setOpenFaq] = useState(0);
-  const [openCommonFaq, setOpenCommonFaq] = useState(0);
-  const [proBilling, setProBilling] = useState<'monthly' | 'annual'>('monthly');
-  const satisfiedScrollRef = useRef<HTMLDivElement>(null);
+  // ── Frame 1 ──────────────────────────────────────────────────────────────
+  const [phase, setPhase]                     = useState<Phase>('idle');
+  const [displayAddress, setDisplayAddress]   = useState('');
+  const [dropdownOpen, setDropdownOpen]       = useState(false);
+  const [selectedProject, setSelectedProject] = useState('');
+  const [ctaActive, setCtaActive]             = useState(false);
+  const idsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const scrollSatisfied = (dir: -1 | 1) => {
-    const el = satisfiedScrollRef.current;
+  useEffect(() => {
+    function schedule(fn: () => void, ms: number) {
+      const id = setTimeout(fn, ms);
+      idsRef.current.push(id);
+    }
+    function run() {
+      idsRef.current = [];
+      setPhase('idle');
+      setDisplayAddress('');
+      setDropdownOpen(false);
+      setSelectedProject('');
+      setCtaActive(false);
+
+      schedule(() => {
+        setPhase('typing');
+        let i = 0;
+        function typeChar() {
+          i++;
+          setDisplayAddress(DEMO_ADDRESS.slice(0, i));
+          if (i < DEMO_ADDRESS.length) {
+            schedule(typeChar, 78 + Math.random() * 36);
+          } else {
+            setPhase('typed');
+            schedule(() => {
+              setDropdownOpen(true);
+              setPhase('dropdown');
+              schedule(() => {
+                setSelectedProject('Deck');
+                setDropdownOpen(false);
+                setPhase('selected');
+                schedule(() => {
+                  setCtaActive(true);
+                  setPhase('cta');
+                  schedule(() => {
+                    setCtaActive(false);
+                    schedule(run, 2800);
+                  }, 2200);
+                }, 1000);
+              }, 1750);
+            }, 1200);
+          }
+        }
+        typeChar();
+      }, 1500);
+    }
+    run();
+    return () => { idsRef.current.forEach(clearTimeout); };
+  }, []);
+
+  const addressActive =
+    phase === 'typing' || phase === 'typed' ||
+    phase === 'dropdown' || phase === 'selected' || phase === 'cta';
+  const selectActive = phase === 'dropdown' || phase === 'selected' || phase === 'cta';
+
+  // ── Frame 3 — deep results panel ─────────────────────────────────────────
+  const s3Ref    = useRef<HTMLElement>(null);
+  const s3IdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [s3Active,   setS3Active]   = useState(false);
+  const [s3Checking, setS3Checking] = useState(-1);
+  const [s3Checked,  setS3Checked]  = useState(0);
+  const [s3Progress, setS3Progress] = useState(0);
+  const [s3Complete, setS3Complete] = useState(false);
+
+  useEffect(() => {
+    const el = s3Ref.current;
     if (!el) return;
-    const card = el.querySelector('.hiw-tcust__card');
-    const gap = 22;
-    const step = (card instanceof HTMLElement ? card.offsetWidth : 300) + gap;
-    el.scrollBy({ left: dir * step, behavior: 'smooth' });
-  };
+
+    function s3Schedule(fn: () => void, ms: number) {
+      const id = setTimeout(fn, ms);
+      s3IdsRef.current.push(id);
+    }
+    function runS3() {
+      s3IdsRef.current.forEach(clearTimeout);
+      s3IdsRef.current = [];
+      setS3Active(false);
+      setS3Checking(-1);
+      setS3Checked(0);
+      setS3Progress(0);
+      setS3Complete(false);
+
+      s3Schedule(() => { setS3Active(true);    setS3Progress(5);   }, 300);
+      s3Schedule(() => { setS3Checking(0);     setS3Progress(22);  }, 700);
+      s3Schedule(() => { setS3Checked(1); setS3Checking(1); setS3Progress(42); }, 1250);
+      s3Schedule(() => { setS3Checked(2); setS3Checking(2); setS3Progress(64); }, 1900);
+      s3Schedule(() => { setS3Checked(3); setS3Checking(3); setS3Progress(86); }, 2600);
+      s3Schedule(() => { setS3Checked(4); setS3Checking(-1); setS3Progress(100); }, 3250);
+      s3Schedule(() => { setS3Complete(true); }, 3900);
+      s3Schedule(runS3, 6400);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) runS3(); },
+      { threshold: 0.2 },
+    );
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      s3IdsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   return (
-    <div className="hiw">
+    <>
+      {/* ═══════════════════════════════════════════
+          FRAME 1 — Enter Your Project
+      ═══════════════════════════════════════════ */}
+      <div className="hiw1">
+        <p className="hiw1__step-label">Step 1 of 4 — Enter Your Project</p>
+        <h1 className="hiw1__headline">
+          Start your permit check<br />
+          <em className="hiw1__headline-em">in under 60 seconds</em>
+        </h1>
 
-      {/* ── Full-viewport fixed shadow overlay ── */}
+        {/* ── Browser mockup frame ── */}
+        <div className="hiw1__browser">
+          <div className="hiw1__chrome" aria-hidden="true">
+            <div className="hiw1__traffic">
+              <span className="hiw1__tdot hiw1__tdot--r" />
+              <span className="hiw1__tdot hiw1__tdot--y" />
+              <span className="hiw1__tdot hiw1__tdot--g" />
+            </div>
+            <div className="hiw1__url-bar">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              app.preclear.io/check
+            </div>
+          </div>
+
+          {/* Address */}
+          <div className={`hiw1__row${addressActive ? ' hiw1__row--active' : ''}`}>
+            <span className="hiw1__icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                <circle cx="12" cy="9" r="2.5"/>
+              </svg>
+            </span>
+            <div className="hiw1__row-body">
+              <span className="hiw1__row-label">Property address</span>
+              <div className="hiw1__row-value">
+                {displayAddress
+                  ? <span className="hiw1__val">{displayAddress}</span>
+                  : <span className="hiw1__ph">Enter property address</span>
+                }
+                {phase === 'typing' && <span className="hiw1__caret" aria-hidden="true" />}
+              </div>
+            </div>
+          </div>
+
+          <div className="hiw1__divider" aria-hidden="true" />
+
+          {/* Project type */}
+          <div className={`hiw1__row hiw1__row--select${selectActive ? ' hiw1__row--active' : ''}`}>
+            <span className="hiw1__icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </span>
+            <div className="hiw1__row-body">
+              <span className="hiw1__row-label">Project type</span>
+              <div className="hiw1__row-value">
+                {selectedProject
+                  ? <span className="hiw1__val">{selectedProject}</span>
+                  : <span className="hiw1__ph">Select project type</span>
+                }
+              </div>
+            </div>
+            <span className={`hiw1__chevron${dropdownOpen ? ' hiw1__chevron--open' : ''}`} aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </span>
+            {dropdownOpen && (
+              <ul className="hiw1__dropdown" role="listbox" aria-label="Project type options">
+                {PROJECT_OPTIONS.map((opt) => (
+                  <li key={opt} role="option" aria-selected={opt === selectedProject}
+                    className={`hiw1__dropdown-item${opt === 'Deck' ? ' hiw1__dropdown-item--hi' : ''}`}>
+                    {opt}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="hiw1__divider" aria-hidden="true" />
+
+          {/* Description */}
+          <div className="hiw1__row hiw1__row--desc">
+            <span className="hiw1__icon hiw1__icon--top" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </span>
+            <div className="hiw1__row-body">
+              <span className="hiw1__row-label">
+                Description <span className="hiw1__opt">(optional)</span>
+              </span>
+              <span className="hiw1__ph hiw1__ph--sm">Briefly describe your project</span>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="hiw1__cta-area">
+            <button type="button"
+              className={`hiw1__cta-btn${ctaActive ? ' hiw1__cta-btn--active' : ''}`}>
+              Start Pre-Check
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </button>
+            <p className="hiw1__trust">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Works across 50+ local jurisdictions
+            </p>
+          </div>
+        </div>
+
+        <p className="hiw1__sub">
+          Instantly check permits, zoning rules, and required documents before you submit.
+        </p>
+        <div className="hiw1__flow-cue" aria-hidden="true">
+          <svg className="hiw1__flow-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <polyline points="19 12 12 19 5 12"/>
+          </svg>
+          <span className="hiw1__flow-text">Next: We analyze your local codes</span>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════
+          FRAME 2 — Behind-the-scenes analysis diagram
+      ═══════════════════════════════════════════ */}
+      <section className="hiw2" aria-label="Step 2: Analyze your property">
+        {HIW_FRAME2_OBJ.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            className={`hiw2__obj hiw2__obj--${i + 1}`}
+            aria-hidden="true"
+          />
+        ))}
+        <p className="hiw2__step-label">Step 2 of 4 — Analyze Your Property</p>
+
+        <h2 className="hiw2__headline">
+          We check every layer<br />
+          <em className="hiw2__headline-em">of your project</em>
+        </h2>
+
+        <p className="hiw2__sub">
+          PreClear compares your address and project scope against zoning rules,
+          permit triggers, and building code requirements.
+        </p>
+
+        {/* ── Analysis diagram ── */}
+        <div className="hiw2__diagram">
+
+          {/* 3 source blocks */}
+          <div className="hiw2__sources">
+
+            <div className="hiw2__source">
+              <div className="hiw2__source-head">
+                <span className="hiw2__source-ico" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                    <circle cx="12" cy="9" r="2.5"/>
+                  </svg>
+                </span>
+                <span className="hiw2__source-title">Property details</span>
+              </div>
+              <ul className="hiw2__source-list">
+                <li>Address</li>
+                <li>Project type</li>
+                <li>Parcel context</li>
+              </ul>
+            </div>
+
+            <div className="hiw2__source">
+              <div className="hiw2__source-head">
+                <span className="hiw2__source-ico" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                    <polyline points="2 17 12 22 22 17"/>
+                    <polyline points="2 12 12 17 22 12"/>
+                  </svg>
+                </span>
+                <span className="hiw2__source-title">Local zoning</span>
+              </div>
+              <ul className="hiw2__source-list">
+                <li>Setbacks</li>
+                <li>Lot coverage</li>
+                <li>Use restrictions</li>
+              </ul>
+            </div>
+
+            <div className="hiw2__source">
+              <div className="hiw2__source-head">
+                <span className="hiw2__source-ico" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                  </svg>
+                </span>
+                <span className="hiw2__source-title">Permit + code</span>
+              </div>
+              <ul className="hiw2__source-list">
+                <li>Permit triggers</li>
+                <li>Inspection stages</li>
+                <li>Required documents</li>
+              </ul>
+            </div>
+
+          </div>
+
+          {/* SVG connector lines — fan from 3 sources into engine */}
+          <div className="hiw2__connector-area" aria-hidden="true">
+            <svg
+              className="hiw2__connector-svg"
+              viewBox="0 0 600 60"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <path className="hiw2__cpath hiw2__cpath--l"
+                d="M 100 0 C 100 30 300 30 300 60"
+                stroke="#c7d2fe" strokeWidth="1.5"/>
+              <path className="hiw2__cpath hiw2__cpath--c"
+                d="M 300 0 L 300 60"
+                stroke="#c7d2fe" strokeWidth="1.5"/>
+              <path className="hiw2__cpath hiw2__cpath--r"
+                d="M 500 0 C 500 30 300 30 300 60"
+                stroke="#c7d2fe" strokeWidth="1.5"/>
+            </svg>
+          </div>
+
+          {/* Engine block */}
+          <div className="hiw2__engine">
+            <div className="hiw2__engine-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12H4M20 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"/>
+              </svg>
+            </div>
+            <strong className="hiw2__engine-label">PreClear Analysis Engine</strong>
+            <span className="hiw2__engine-sub">Analyzes everything together</span>
+          </div>
+
+        </div>
+
+        <div className="hiw2__flow-cue" aria-hidden="true">
+          <svg className="hiw2__flow-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <polyline points="19 12 12 19 5 12"/>
+          </svg>
+          <span className="hiw2__flow-text">Next: See your permit requirements</span>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+          FRAME 3 — Deep results panel
+      ═══════════════════════════════════════════ */}
+      <section className="hiw3" ref={s3Ref} aria-label="Step 3: Your permit requirements">
+        {HIW_FRAME3_OBJ.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            className={`hiw3__obj hiw3__obj--${i + 1}`}
+            aria-hidden="true"
+          />
+        ))}
+        <p className="hiw3__step-label">Step 3 of 4 — Your Results</p>
+
+        <h2 className="hiw3__headline">
+          Know exactly what<br />
+          <em className="hiw3__headline-em">your project requires</em>
+        </h2>
+
+        <p className="hiw3__sub">
+          No more guessing. See every rule your project must follow —
+          zoning, setbacks, permits, and code requirements.
+        </p>
+
+        {/* ── Results card ── */}
+        <div className={`hiw3__card${s3Complete ? ' hiw3__card--done' : ''}`}>
+
+          {/* Context bar */}
+          <div className="hiw3__context">
+            <span className="hiw3__context-item">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                <circle cx="12" cy="9" r="2.5"/>
+              </svg>
+              Baltimore, MD 21201
+            </span>
+            <span className="hiw3__context-dot" aria-hidden="true">·</span>
+            <span className="hiw3__context-item">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              Deck
+            </span>
+          </div>
+
+          <div className="hiw3__rule" aria-hidden="true" />
+
+          {/* Status + live progress */}
+          <div className="hiw3__status">
+            <span className={`hiw3__status-dot${
+              s3Complete ? ' hiw3__status-dot--done'
+              : s3Active  ? ' hiw3__status-dot--active'
+              : ''}`}
+              aria-hidden="true"
+            />
+            <span className="hiw3__status-text" aria-live="polite">
+              {s3Complete
+                ? 'Analysis complete'
+                : s3Active
+                  ? 'Analyzing your project…'
+                  : 'Ready to analyze'}
+            </span>
+            {s3Active && !s3Complete && (
+              <span className="hiw3__status-pct" aria-hidden="true">{s3Progress}%</span>
+            )}
+            {s3Complete && <span className="hiw3__status-badge">Done</span>}
+          </div>
+
+          {/* Progress bar */}
+          <div className="hiw3__progress-track" aria-hidden="true">
+            <div className="hiw3__progress-bar" style={{ width: `${s3Progress}%` }} />
+          </div>
+
+          {/* Checklist */}
+          <ul className="hiw3__checklist" aria-label="Analysis steps">
+            {CHECKS.map((check, i) => {
+              const checked  = i < s3Checked;
+              const checking = s3Checking === i;
+              const visible  = checked || checking;
+              return (
+                <li key={check.label}
+                  className={`hiw3__item${visible ? ' hiw3__item--visible' : ''}`}>
+                  <span className={`hiw3__item-icon${
+                    checked   ? ' hiw3__item-icon--checked'
+                    : checking ? ' hiw3__item-icon--checking'
+                    : ''}`}
+                    aria-hidden="true"
+                  >
+                    {checked ? (
+                      <svg width="9" height="9" viewBox="0 0 12 12" fill="none"
+                        stroke="currentColor" strokeWidth="2.2"
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="2 6.5 4.5 9 10 3"/>
+                      </svg>
+                    ) : checking ? (
+                      <span className="hiw3__spin-arc" />
+                    ) : (
+                      <span className="hiw3__dot-pending" />
+                    )}
+                  </span>
+                  <div className="hiw3__item-body">
+                    <span className="hiw3__item-label">{check.label}</span>
+                    <span className={`hiw3__item-sub${
+                      checking ? ' hiw3__item-sub--checking'
+                      : !checked ? ' hiw3__item-sub--ghost'
+                      : ''}`}>
+                      {checking ? 'Verifying…' : check.detail}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Completion CTA */}
+          <div className={`hiw3__summary${s3Complete ? ' hiw3__summary--visible' : ''}`}
+            aria-live="polite">
+            <span className="hiw3__summary-text">See My Permit Requirements</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </div>
+
+        </div>
+
+        {/* Flow cue */}
+        <div className="hiw3__flow-cue" aria-hidden="true">
+          <svg className="hiw3__flow-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <polyline points="19 12 12 19 5 12"/>
+          </svg>
+          <span className="hiw3__flow-text">Next: Move forward with confidence</span>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+          FRAME 4 — Deliverable / confidence
+      ═══════════════════════════════════════════ */}
+      <section className="hiw4" aria-label="Step 4: Move forward with confidence">
+        {HIW_FRAME4_OBJ.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            className={`hiw4__obj hiw4__obj--${i + 1}`}
+            aria-hidden="true"
+          />
+        ))}
+        <p className="hiw4__step-label">Step 4 of 4 — Move Forward With Confidence</p>
+
+        <h2 className="hiw4__headline">
+          Move forward with<br />
+          <em className="hiw4__headline-em">everything you need</em>
+        </h2>
+
+        <p className="hiw4__sub">
+          Get a complete checklist, required documents, and code references — ready for submission.
+        </p>
+
+        {/* Document-style output mock */}
+        <div className="hiw4__mock">
+
+          {/* Title bar */}
+          <div className="hiw4__mock-bar" aria-hidden="true">
+            <div className="hiw4__mock-dots">
+              <span className="hiw4__mock-dot hiw4__mock-dot--r" />
+              <span className="hiw4__mock-dot hiw4__mock-dot--y" />
+              <span className="hiw4__mock-dot hiw4__mock-dot--g" />
+            </div>
+            <span className="hiw4__mock-title">preclear_checklist — Deck.pdf</span>
+            <span className="hiw4__mock-status">Ready to export</span>
+          </div>
+
+          {/* Two-column body: paper stack left, preview right */}
+          <div className="hiw4__mock-body">
+
+            {/* Left: fanned paper stack */}
+            <aside className="hiw4__stack-col" aria-hidden="true">
+              <div className="hiw4__paper-stack">
+                <div className="hiw4__sheet hiw4__sheet--back2" />
+                <div className="hiw4__sheet hiw4__sheet--back1" />
+                <div className="hiw4__sheet hiw4__sheet--front">
+                  <span className="hiw4__sheet-kicker">PROJECT PACKAGE</span>
+                  <span className="hiw4__sheet-title">Deck Permit Pre-Check</span>
+                  <span className="hiw4__sheet-meta">Baltimore, MD 21201</span>
+                </div>
+              </div>
+              <p className="hiw4__stack-caption">3 documents ready</p>
+            </aside>
+
+            {/* Right: preview content */}
+            <div className="hiw4__preview-col">
+
+              {/* Stat chips */}
+              <div className="hiw4__stat-rail" aria-label="Project summary">
+                <div className="hiw4__stat-chip">
+                  <span className="hiw4__stat-chip-k">Permit</span>
+                  <span className="hiw4__stat-chip-v">Required</span>
+                </div>
+                <div className="hiw4__stat-chip">
+                  <span className="hiw4__stat-chip-k">Documents</span>
+                  <span className="hiw4__stat-chip-v">4 items</span>
+                </div>
+                <div className="hiw4__stat-chip hiw4__stat-chip--accent">
+                  <span className="hiw4__stat-chip-k">Zoning</span>
+                  <span className="hiw4__stat-chip-v">Verified</span>
+                </div>
+              </div>
+
+              <div className="hiw4__doc-rule" aria-hidden="true" />
+
+              {/* Document list */}
+              <p className="hiw4__doc-section-label">Required documents</p>
+              <ul className="hiw4__doc-list">
+                {HIW4_DOCS.map((d) => (
+                  <li key={d} className="hiw4__doc-row">
+                    <span className="hiw4__doc-check" aria-hidden="true">
+                      <svg width="9" height="9" viewBox="0 0 12 12" fill="none"
+                        stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="2 6.5 4.5 9 10 3"/>
+                      </svg>
+                    </span>
+                    {d}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="hiw4__doc-rule" aria-hidden="true" />
+
+              {/* Flag + code inline */}
+              <div className="hiw4__doc-footer-row">
+                <div className="hiw4__doc-flag">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    aria-hidden="true">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  {HIW4_FLAGS[0]}
+                </div>
+                <code className="hiw4__doc-code">{HIW4_CODES[0]}</code>
+              </div>
+
+            </div>
+          </div>
+
+          {/* CTA strip */}
+          <div className="hiw4__cta-wrap">
+            <button type="button" className="hiw4__download-text">
+              Download Full Checklist
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <ul className="hiw4__trust" aria-label="Trust signals">
+              <li>Ready for submission</li>
+              <li>No surprises at review</li>
+              <li>50+ jurisdictions</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div className="hiw4__divider" aria-hidden="true">
+          <span className="hiw4__divider-label">Ready to start?</span>
+        </div>
+
+        <div className="hiw4__final">
+          <p className="hiw4__headline hiw4__headline--final">
+            Start your first pre-check<br />
+            <em className="hiw4__headline-em">Free</em>
+          </p>
+          <p className="hiw4__final-sub">No credit card. Results in under a minute.</p>
+          <Link to={paths.signUp} className="hiw4__final-btn">
+            Get Started
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </Link>
+        </div>
+      </section>
+
+      {/* Full-viewport shadow — last in tree + highest z-index so it sits above all HIW images */}
       <img
         src="/images/howItWorks/Feature/shadow.png"
         alt=""
         className="hiw__shadow-overlay"
         aria-hidden="true"
       />
-
-      {/* ── Hero ── */}
-      <section className="hiw__hero">
-        <h1 className="hiw__title">
-          Stop Guessing.{' '}
-          <span className="hiw__title-accent">Start Building.</span>
-        </h1>
-        <p className="hiw__subtitle">
-          Run a permit pre-check before you submit. We compare your project to local zoning
-          and building codes so you catch issues in minutes, not weeks. It's like having a local building inspector in your pocket.
-        </p>
-      </section>
-
-      {/* ── Main two-col ── */}
-      <section className="hiw__body">
-
-        {/* Left — project card image (switches with accordion) */}
-        <div className="hiw__card-wrap">
-          <div className="hiw__project-card hiw__project-card--image">
-            <img
-              key={openFaq}
-              src={FAQ_CARD_IMAGES[openFaq]}
-              alt={`PreClear preview — ${FAQS[openFaq].q}`}
-              className={`hiw__card-image${openFaq === 3 ? ' hiw__card-image--d' : ''}`}
-            />
-          </div>
-        </div>
-
-        {/* Right — FAQ accordion */}
-        <div className="hiw__faq">
-          {FAQS.map((item, i) => (
-            <div
-              key={i}
-              className={`hiw__faq-item${openFaq === i ? ' hiw__faq-item--open' : ''}`}
-              onClick={() => setOpenFaq(i)}
-            >
-              <div className="hiw__faq-row">
-                <p className="hiw__faq-q">{item.q}</p>
-                <span className="hiw__faq-icon">{openFaq === i ? '−' : '+'}</span>
-              </div>
-              {openFaq === i && <p className="hiw__faq-a">{item.a}</p>}
-            </div>
-          ))}
-
-        </div>
-
-      </section>
-
-      {/* ── Logo marquee ── */}
-      <div className="hiw__marquee-outer">
-        <div className="hiw__marquee-wrap">
-          <span className="hiw__marquee-label">Businesses using PreClear</span>
-          <div className="hiw__marquee-track-wrap">
-            <div className="hiw__marquee-fade hiw__marquee-fade--left" />
-            <div className="hiw__marquee-track">
-              <div className="hiw__marquee-inner">
-                {[...LOGOS, ...LOGOS, ...LOGOS].map((n, i) => (
-                  <img
-                    key={i}
-                    src={`/images/howItWorks/PartnerLogos/PLogo${n}.png`}
-                    alt={`Partner logo ${n}`}
-                    className="hiw__marquee-logo"
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="hiw__marquee-fade hiw__marquee-fade--right" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Pain points (deco + checklist + CTA) ── */}
-      <section className="hiw-pain" aria-labelledby="hiw-pain-heading">
-        <img
-          src="/images/Home/HeroSection/HeroClip.png"
-          alt=""
-          className="hiw-pain__deco hiw-pain__deco--clip"
-          aria-hidden="true"
-        />
-        <img
-          src="/images/Home/HeroSection/HeroPin.png"
-          alt=""
-          className="hiw-pain__deco hiw-pain__deco--pin"
-          aria-hidden="true"
-        />
-        <img
-          src="/images/Home/HeroSection/HeroHold.png"
-          alt=""
-          className="hiw-pain__deco hiw-pain__deco--hold"
-          aria-hidden="true"
-        />
-
-        <div className="hiw-pain__inner">
-            <p className="hiw-pain__stamp">Project pre-check</p>
-            <p className="hiw-pain__eyebrow">Sick of settling for makeshift solutions?</p>
-            <h2 id="hiw-pain-heading" className="hiw__title hiw-pain__headline">
-              If any of these sound familiar,{' '}
-              <span className="hiw__title-accent">PreClear will save you hours.</span>
-            </h2>
-
-            <ul className="hiw-pain__list">
-              {PAIN_POINTS.map((text, i) => (
-                <li key={text} className="hiw-pain__item">
-                  <span className="hiw-pain__item-num" aria-hidden="true">0{i + 1}</span>
-                  <img
-                    src="/images/howItWorks/checkmark.png"
-                    alt=""
-                    className="hiw-pain__check"
-                    width={36}
-                    height={36}
-                  />
-                  <span className="hiw-pain__text">{text}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Link to="/" className="hiw-pain__cta">
-              Try PreClear
-            </Link>
-          </div>
-      </section>
-
-      {/* ── Benefits grid (below checklist) ── */}
-      <section className="hiw-benefits" aria-labelledby="hiw-benefits-heading">
-        <img
-          src="/images/howItWorks/fram2/measure2.png"
-          alt=""
-          className="hiw-benefits__ruler-divider"
-          aria-hidden="true"
-        />
-        <div className="hiw-benefits__inner">
-          <div className="hiw-benefits__header-row">
-            <h2 id="hiw-benefits-heading" className="hiw__title hiw-benefits__headline">
-              How PreClear helps you
-              <br />
-              <span className="hiw__title-accent">build with less friction.</span>
-            </h2>
-            <Link to="/" className="hiw-benefits__cta-btn">
-              Start your pre-check
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </Link>
-          </div>
-
-          <ul className="hiw-benefits__grid">
-            {([1,2,3,4] as const).map((n) => (
-              <li key={n} className="hiw-benefits__cell">
-                <img
-                  src={`/images/howItWorks/Feature/Feature${n}.png`}
-                  alt={`PreClear feature ${n}`}
-                  className="hiw-benefits__feat-img"
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* ── Pricing (dark grid + layered cards) ── */}
-      <section className="hiw-pricing" aria-labelledby="hiw-pricing-heading">
-        <div className="hiw-pricing__inner">
-          <p className="hiw-pricing__eyebrow">Sick of settling for makeshift solutions?</p>
-          <h2 id="hiw-pricing-heading" className="hiw-pricing__heading">
-            Pricing That Grows With Your Project
-          </h2>
-
-          <div className="hiw-pricing__cards">
-            <div className="hiw-pricing__shell hiw-pricing__shell--starter">
-              <div className="hiw-pricing__card">
-                <h3 className="hiw-pricing__tier">Starter</h3>
-                <p className="hiw-pricing__subtitle">For homeowners starting their first project</p>
-                <p className="hiw-pricing__price hiw-pricing__price--free">Free</p>
-                <hr className="hiw-pricing__divider" aria-hidden="true" />
-                <ul className="hiw-pricing__features">
-                  {PRICING_STARTER_FEATURES.map((line) => (
-                    <li key={line} className="hiw-pricing__feature">
-                      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true" className="hiw-pricing__check">
-                        <circle cx="7.5" cy="7.5" r="6.75" stroke="#cbd5e1" strokeWidth="1"/>
-                        <path d="M4.5 7.5l2 2 4-4" stroke="#475569" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="hiw-pricing__shelf">
-                <Link to="/" className="hiw-pricing__cta hiw-pricing__cta--inverse">
-                  Get Started
-                </Link>
-              </div>
-            </div>
-
-            <div className="hiw-pricing__shell hiw-pricing__shell--pro">
-              <div className="hiw-pricing__pro-badge" aria-label="Most popular plan">
-                Most popular
-              </div>
-              <div className="hiw-pricing__card hiw-pricing__card--pro">
-                <h3 className="hiw-pricing__tier">Professional</h3>
-                <p className="hiw-pricing__subtitle">For homeowners with complex projects</p>
-                <p className="hiw-pricing__price">
-                  {proBilling === 'monthly' ? (
-                    <>
-                      $39<span className="hiw-pricing__price-unit">/month</span>
-                    </>
-                  ) : (
-                    <>
-                      $31<span className="hiw-pricing__price-unit">/mo</span>
-                      <span className="hiw-pricing__price-note"> billed annually</span>
-                    </>
-                  )}
-                </p>
-                <div
-                  className="hiw-pricing__toggle"
-                  role="group"
-                  aria-label="Billing period"
-                >
-                  <button
-                    type="button"
-                    className={proBilling === 'monthly' ? 'is-active' : ''}
-                    onClick={() => setProBilling('monthly')}
-                  >
-                    Monthly
-                  </button>
-                  <button
-                    type="button"
-                    className={proBilling === 'annual' ? 'is-active' : ''}
-                    onClick={() => setProBilling('annual')}
-                  >
-                    Annually
-                  </button>
-                </div>
-                <hr className="hiw-pricing__divider" aria-hidden="true" />
-                <ul className="hiw-pricing__features">
-                  {PRICING_PRO_FEATURES.map((line) => (
-                    <li key={line} className="hiw-pricing__feature">
-                      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true" className="hiw-pricing__check">
-                        <circle cx="7.5" cy="7.5" r="6.75" stroke="rgba(255,255,255,0.22)" strokeWidth="1"/>
-                        <path d="M4.5 7.5l2 2 4-4" stroke="rgba(255,255,255,0.75)" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="hiw-pricing__shelf">
-                <Link to="/" className="hiw-pricing__cta hiw-pricing__cta--amber">
-                  Start Free Trial
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Satisfied customers ── */}
-      <section className="hiw-tcust" aria-labelledby="hiw-tcust-heading">
-        <div className="hiw-tcust__inner">
-
-          {/* Header row: title left · nav buttons right */}
-          <div className="hiw-tcust__header">
-            <div className="hiw-tcust__header-text">
-              <p className="hiw-tcust__eyebrow" aria-hidden="true">From our community</p>
-              <h2 id="hiw-tcust-heading" className="hiw-tcust__heading">
-                Results from<br />the field.
-              </h2>
-            </div>
-            <div className="hiw-tcust__nav" role="group" aria-label="Carousel navigation">
-              <button
-                type="button"
-                className="hiw-tcust__nav-btn"
-                aria-label="Scroll left"
-                onClick={() => scrollSatisfied(-1)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="hiw-tcust__nav-btn"
-                aria-label="Scroll right"
-                onClick={() => scrollSatisfied(1)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Carousel */}
-          <div
-            ref={satisfiedScrollRef}
-            className="hiw-tcust__track"
-            tabIndex={0}
-            role="list"
-            aria-label="Customer highlights"
-          >
-            {SATISFIED_CUSTOMERS.map((item) => (
-              <article key={item.label} className="hiw-tcust__card" role="listitem">
-                <p className="hiw-tcust__label">{item.label}</p>
-                <p className="hiw-tcust__stat">{item.stat}</p>
-                <p className="hiw-tcust__desc">{item.description}</p>
-                <p className="hiw-tcust__name">{item.name}</p>
-              </article>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── Common questions ── */}
-      <section className="hiw-cfaq" aria-labelledby="hiw-cfaq-heading">
-        <div className="hiw-cfaq__inner">
-
-          {/* Left: sticky label column */}
-          <div className="hiw-cfaq__sidebar">
-            <p className="hiw-cfaq__eyebrow" aria-hidden="true">FAQ</p>
-            <h2 id="hiw-cfaq-heading" className="hiw-cfaq__title">
-              Common<br />questions
-            </h2>
-            <p className="hiw-cfaq__count" aria-hidden="true">
-              {COMMON_QUESTIONS.length} topics
-            </p>
-          </div>
-
-          {/* Right: accordion list */}
-          <div className="hiw-cfaq__list" role="list">
-            {COMMON_QUESTIONS.map((item, i) => {
-              const isOpen = openCommonFaq === i;
-              return (
-                <div
-                  key={item.q}
-                  className={`hiw-cfaq__item${isOpen ? ' hiw-cfaq__item--open' : ''}`}
-                  role="listitem"
-                >
-                  <button
-                    type="button"
-                    className="hiw-cfaq__trigger"
-                    aria-expanded={isOpen}
-                    aria-controls={`hiw-cfaq-panel-${i}`}
-                    id={`hiw-cfaq-trigger-${i}`}
-                    onClick={() => setOpenCommonFaq(isOpen ? -1 : i)}
-                  >
-                    <span className="hiw-cfaq__q">{item.q}</span>
-                    <span className="hiw-cfaq__icon" aria-hidden="true">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 2v12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"
-                          className="hiw-cfaq__icon-v" />
-                        <path d="M2 8h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                      </svg>
-                    </span>
-                  </button>
-                  {isOpen && (
-                    <div
-                      id={`hiw-cfaq-panel-${i}`}
-                      className="hiw-cfaq__panel"
-                      role="region"
-                      aria-labelledby={`hiw-cfaq-trigger-${i}`}
-                    >
-                      <p className="hiw-cfaq__a">{item.a}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── Bottom CTA ── */}
-      <section className="hiw-bcta" aria-labelledby="hiw-bcta-heading">
-        <div className="hiw-bcta__canvas">
-          {/* Layered overlay for depth + readability */}
-          <div className="hiw-bcta__overlay" aria-hidden="true" />
-
-          {/* All content on top of image */}
-          <div className="hiw-bcta__body">
-
-            {/* Top row: eyebrow + aura badge */}
-            <div className="hiw-bcta__top-row">
-              <p className="hiw-bcta__eyebrow" aria-hidden="true">
-                PreClear
-              </p>
-              <div className="hiw-bcta__aura-badge">
-                <span className="hiw-bcta__aura-dot" aria-hidden="true" />
-                <span>Meet Aura</span>
-              </div>
-            </div>
-
-            {/* Main CTA block */}
-            <div className="hiw-bcta__main">
-              <h2 id="hiw-bcta-heading" className="hiw-bcta__title">
-                Build with confidence.<br />
-                <span className="hiw-bcta__title-soft">Start your pre-check free.</span>
-              </h2>
-              <p className="hiw-bcta__sub">
-                Know exactly what your project needs before you file — no guesswork, no surprises.
-              </p>
-              <div className="hiw-bcta__actions">
-                <Link to="/" className="hiw-bcta__btn hiw-bcta__btn--primary">
-                  Get Started
-                </Link>
-                <Link to="/" className="hiw-bcta__btn hiw-bcta__btn--ghost">
-                  See how it works
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                    <path d="M2.5 7h9M8 3.5l3.5 3.5L8 10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </Link>
-              </div>
-            </div>
-
-            {/* Bottom-right: Aura detail */}
-            <div className="hiw-bcta__aura-detail">
-              <p className="hiw-bcta__aura-tagline">Your personal AI agent</p>
-              <Link to="/" className="hiw-bcta__learn">
-                Learn more →
-              </Link>
-            </div>
-
-          </div>
-        </div>
-      </section>
-    </div>
+    </>
   );
 }
