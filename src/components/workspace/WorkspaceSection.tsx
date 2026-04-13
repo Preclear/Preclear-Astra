@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 
 type ProjectStatus = 'draft' | 'in-review' | 'approved';
 
@@ -23,11 +24,26 @@ const SAMPLE_PROJECTS: Project[] = [
   { id: '3', name: 'Solar Panel Install',type: 'Electrical',  address: '21 Oak Rd, Annapolis, MD',     status: 'approved',  date: 'Feb 28, 2026' },
 ];
 
-export default function WorkspaceSection() {
+interface WorkspaceSectionProps {
+  /** Called when the user clicks the "+ New Project" card — opens the permit modal */
+  onNewProject?: () => void;
+}
+
+export default function WorkspaceSection({ onNewProject }: WorkspaceSectionProps) {
   const [projects, setProjects] = useState<Project[]>(SAMPLE_PROJECTS);
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAddress, setNewAddress] = useState('');
+
+  // Toast state
+  const [toastVisible, setToastVisible] = useState(false);
+
+  // Auto-dismiss toast after 2.5 s
+  useEffect(() => {
+    if (!toastVisible) return;
+    const t = setTimeout(() => setToastVisible(false), 2500);
+    return () => clearTimeout(t);
+  }, [toastVisible]);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +60,14 @@ export default function WorkspaceSection() {
     setNewAddress('');
     setShowNew(false);
   };
+
+  function handleNewProjectClick() {
+    if (onNewProject) {
+      onNewProject();
+    } else {
+      setShowNew(true);
+    }
+  }
 
   return (
     <div className="workspace">
@@ -69,8 +93,12 @@ export default function WorkspaceSection() {
 
       <div className="workspace__grid">
 
-        {/* Add card — equal width, left */}
-        <button className="workspace__card workspace__card--add" onClick={() => setShowNew(true)}>
+        {/* Add card */}
+        <button
+          id="workspace-new-project"
+          className="workspace__card workspace__card--add"
+          onClick={handleNewProjectClick}
+        >
           <div className="workspace__card-add-body">
             <div className="workspace__card-add-ring">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -100,11 +128,30 @@ export default function WorkspaceSection() {
               <p className="workspace__card-address">{p.address}</p>
               <div className="workspace__card-footer">
                 <span className="workspace__card-date">{p.date}</span>
-                <button className="workspace__card-open">Open →</button>
+                <button
+                  id={`project-open-${p.id}`}
+                  className="workspace__card-open"
+                  onClick={() => setToastVisible(true)}
+                >
+                  Open →
+                </button>
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Toast notification */}
+      <div
+        id="project-toast"
+        className={`toast${toastVisible ? ' toast--visible' : ''}`}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="toast__icon">
+          <CheckCircle2 size={16} />
+        </span>
+        Full project history coming soon
       </div>
     </div>
   );
