@@ -9,6 +9,9 @@ import FeaturesPage from './pages/FeaturesPage';
 import PricingPage from './pages/PricingPage';
 import GuidesPage from './pages/GuidesPage';
 import { paths } from './routes';
+import AppShell from './app/AppShell';
+import DashboardPage from './app/DashboardPage';
+import NewProjectQuestionnairePage from './app/questionnaire/NewProjectQuestionnairePage';
 
 const SignUpPage = lazy(() => import('./pages/SignUpPage'));
 const SignInPage = lazy(() => import('./pages/SignInPage'));
@@ -17,6 +20,10 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path={paths.app} element={<AppShell />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="questionnaire" element={<NewProjectQuestionnairePage />} />
+        </Route>
         <Route path={paths.home} element={
           <Layout headerVariant="light">
             <HomePage />

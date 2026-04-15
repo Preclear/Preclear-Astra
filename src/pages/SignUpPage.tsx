@@ -6,6 +6,7 @@ import {
   supabaseUrl,
   isSupabaseConfigured,
 } from '../lib/supabase';
+import { paths } from '../routes';
 
 const emailSignupUrl = isSupabaseConfigured
   ? `${supabaseUrl}/functions/v1/email-signup`
@@ -58,7 +59,7 @@ export default function SignUpPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/sign-up`,
+        redirectTo: `${window.location.origin}${paths.app}`,
         queryParams: { prompt: 'select_account' },
       },
     });
