@@ -10,4 +10,8 @@ export const paths = {
   guides: '/guides',
   signIn: '/sign-in',
   signUp: '/sign-up',
+  /** Logged-in app (project workspace). */
+  app: '/app',
+  /** New project questionnaire (under app shell). */
+  appQuestionnaire: '/app/questionnaire',
 } as const;

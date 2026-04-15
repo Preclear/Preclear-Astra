@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import WorkspaceSection from '../components/workspace/WorkspaceSection';
+import { paths } from '../routes';
 
 const PLACEHOLDERS = [
   'Changing windows...',
@@ -92,7 +93,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <WorkspaceSection />
+      <WorkspaceSection newProjectHref={paths.appQuestionnaire} />
     </section>
 
     {/* Wood table */}

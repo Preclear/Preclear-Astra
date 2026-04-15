@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type ProjectStatus = 'draft' | 'in-review' | 'approved';
 
@@ -23,11 +24,17 @@ const SAMPLE_PROJECTS: Project[] = [
   { id: '3', name: 'Solar Panel Install',type: 'Electrical',  address: '21 Oak Rd, Annapolis, MD',     status: 'approved',  date: 'Feb 28, 2026' },
 ];
 
-export default function WorkspaceSection() {
+type WorkspaceSectionProps = {
+  /** When set, “New Project” opens this route (e.g. questionnaire) instead of the inline form. */
+  newProjectHref?: string;
+};
+
+export default function WorkspaceSection({ newProjectHref }: WorkspaceSectionProps) {
   const [projects, setProjects] = useState<Project[]>(SAMPLE_PROJECTS);
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAddress, setNewAddress] = useState('');
+  const useQuestionnaire = Boolean(newProjectHref);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,19 +77,35 @@ export default function WorkspaceSection() {
       <div className="workspace__grid">
 
         {/* Add card — equal width, left */}
-        <button className="workspace__card workspace__card--add" onClick={() => setShowNew(true)}>
-          <div className="workspace__card-add-body">
-            <div className="workspace__card-add-ring">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-              </svg>
+        {useQuestionnaire && newProjectHref ? (
+          <Link to={newProjectHref} className="workspace__card workspace__card--add">
+            <div className="workspace__card-add-body">
+              <div className="workspace__card-add-ring">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <p className="workspace__card-add-label">New Project</p>
+                <p className="workspace__card-add-hint">Start a permit pre-check</p>
+              </div>
             </div>
-            <div>
-              <p className="workspace__card-add-label">New Project</p>
-              <p className="workspace__card-add-hint">Start a permit pre-check</p>
+          </Link>
+        ) : (
+          <button type="button" className="workspace__card workspace__card--add" onClick={() => setShowNew(true)}>
+            <div className="workspace__card-add-body">
+              <div className="workspace__card-add-ring">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <p className="workspace__card-add-label">New Project</p>
+                <p className="workspace__card-add-hint">Start a permit pre-check</p>
+              </div>
             </div>
-          </div>
-        </button>
+          </button>
+        )}
 
         {/* Project cards */}
         {projects.map((p) => {
