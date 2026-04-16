@@ -11,6 +11,7 @@ import GuidesPage from './pages/GuidesPage';
 import { paths } from './routes';
 import AppShell from './app/AppShell';
 import DashboardPage from './app/DashboardPage';
+import ProjectPage from './app/ProjectPage';
 import NewProjectQuestionnairePage from './app/questionnaire/NewProjectQuestionnairePage';
 
 const SignUpPage = lazy(() => import('./pages/SignUpPage'));
@@ -23,6 +24,7 @@ function App() {
         <Route path={paths.app} element={<AppShell />}>
           <Route index element={<DashboardPage />} />
           <Route path="questionnaire" element={<NewProjectQuestionnairePage />} />
+          <Route path="projects/:projectId" element={<ProjectPage />} />
         </Route>
         <Route path={paths.home} element={
           <Layout headerVariant="light">

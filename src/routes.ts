@@ -14,4 +14,6 @@ export const paths = {
   app: '/app',
   /** New project questionnaire (under app shell). */
   appQuestionnaire: '/app/questionnaire',
+  /** Saved project detail page under app shell. */
+  appProject: '/app/projects/:projectId',
 } as const;

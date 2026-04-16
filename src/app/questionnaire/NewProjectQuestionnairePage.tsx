@@ -1,5 +1,4 @@
 import {
-  FormEvent,
   WheelEvent,
   useCallback,
   useEffect,
@@ -264,10 +263,10 @@ export default function NewProjectQuestionnairePage() {
   }, []);
 
   useEffect(() => {
-    if (step !== 6 || workScopeId !== 'windows') {
+    if (step !== 6) {
       setConfigureAuraOpen(false);
     }
-  }, [step, workScopeId]);
+  }, [step]);
 
   useEffect(() => {
     if (step !== 0 || projectName.trim().length > 0 || nameFieldFocused) {
@@ -421,7 +420,7 @@ export default function NewProjectQuestionnairePage() {
 
   const canNextConfigure = canNextWindowConfigure || canNextGenericConfigure;
 
-  const progressLabels = useMemo(() => [...BASE_STEP_LABELS, 'Configure', 'Review'] as const, []);
+  const progressLabels = useMemo(() => [...BASE_STEP_LABELS, 'Configure', 'Report'] as const, []);
 
   const maxStepIndex = progressLabels.length - 1;
 
@@ -446,8 +445,7 @@ export default function NewProjectQuestionnairePage() {
     if (step !== 4) setWorkSubView('main');
   }, [step]);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
+  const finishProject = () => {
     navigate(paths.app, { replace: true });
   };
 
@@ -459,6 +457,11 @@ export default function NewProjectQuestionnairePage() {
     if (step === 4 && !canNextWork) return;
     if (step === 5 && !canNextScope) return;
     if (step === 6 && !canNextConfigure) return;
+    if (step === 6) {
+      setConfigureAuraOpen(false);
+      setStep(7);
+      return;
+    }
     if (step < maxStepIndex) setStep((s) => s + 1);
   };
 
@@ -475,10 +478,6 @@ export default function NewProjectQuestionnairePage() {
 
   const propertyCategoryLabel = propertyCategory
     ? PROPERTY_TYPE_OPTIONS.find((o) => o.id === propertyCategory)?.label ?? '—'
-    : '—';
-
-  const propertySpecialLabel = propertySpecial
-    ? PROPERTY_SPECIAL_OPTIONS.find((o) => o.id === propertySpecial)?.label ?? '—'
     : '—';
 
   const workResponsibleLabel = workResponsible
@@ -590,8 +589,8 @@ export default function NewProjectQuestionnairePage() {
           <div className="questionnaire-footer__right">
             {step === maxStepIndex ? (
               <button
-                type="submit"
-                form={FORM_ID}
+                type="button"
+                onClick={finishProject}
                 className="questionnaire-footer-cta questionnaire-footer-cta--primary"
               >
                 Create project
@@ -618,7 +617,7 @@ export default function NewProjectQuestionnairePage() {
   const mainChromeClass =
     step === 0 || step === 1 || step === 2 || step === 3 || step === 4 || step === 5
       ? 'app-questionnaire__main app-questionnaire__main--between-chrome'
-      : step === 6
+      : step === 6 || step === 7
         ? 'app-questionnaire__main app-questionnaire__main--configure'
         : 'app-questionnaire__main';
   const isAuraChatView = step === 6 && configureAuraOpen;
@@ -1361,81 +1360,116 @@ export default function NewProjectQuestionnairePage() {
               </div>
             </form>
           ) : step === 7 ? (
-            <div className="questionnaire questionnaire--narrow">
-              <h1 className="questionnaire__title">Review</h1>
-              <p className="questionnaire__subtitle">
-                Confirm everything looks right before we create your workspace project.
-              </p>
-
-              <form id={FORM_ID} className="questionnaire__form" onSubmit={handleSubmit}>
-                <div className="questionnaire__summary">
-                  <dl className="questionnaire__dl">
-                    <dt>Goal</dt>
-                    <dd>{intentLabel}</dd>
-                    <dt>Name</dt>
-                    <dd>{projectName || '—'}</dd>
-                    <dt>Address</dt>
-                    <dd>{address || '—'}</dd>
-                    <dt>Property type</dt>
-                    <dd>{propertyCategoryLabel}</dd>
-                    <dt>Property details</dt>
-                    <dd>{propertySpecialLabel}</dd>
-                    <dt>Who&apos;s responsible</dt>
-                    <dd>{workResponsibleLabel}</dd>
-                    {workResponsible === 'diy' && (
-                      <>
-                        <dt>Own and live on property</dt>
-                        <dd>{ownLiveLabel}</dd>
-                      </>
-                    )}
-                    {workResponsible === 'hired-contractor' && (
-                      <>
-                        <dt>Who pulls the permit</dt>
-                        <dd>{permitPulledLabel}</dd>
-                      </>
-                    )}
-                    {workResponsible === 'contractor' && (
-                      <>
-                        <dt>Active insurance</dt>
-                        <dd>{contractorInsuranceLabel}</dd>
-                      </>
-                    )}
-                    <dt>Work scope</dt>
-                    <dd>
-                      {workScopeId ? (
-                        <>
-                          <span className="questionnaire__dd-kicker">
-                            {WORK_SCOPE_OPTIONS.find((o) => o.id === workScopeId)?.category}
-                          </span>{' '}
-                          {workScopeLabel}
-                        </>
-                      ) : (
-                        '—'
-                      )}
-                    </dd>
-                    {workScopeId === 'windows' && (
-                      <>
-                        <dt>Windows</dt>
-                        <dd>
-                          {windowCountLabel} · {windowStyleLabel}
-                        </dd>
-                      </>
-                    )}
-                    {workScopeId !== null && workScopeId !== 'windows' && (
-                      <>
-                        <dt>Project stage</dt>
-                        <dd>{scopeStageLabel}</dd>
-                        <dt>Work intensity</dt>
-                        <dd>{scopeComplexityLabel}</dd>
-                      </>
-                    )}
-                  </dl>
-                  <p className="questionnaire__hint">
-                    You can edit your project and add documents after it appears in your workspace.
-                  </p>
+            <form id={FORM_ID} className="questionnaire-configure-form" onSubmit={(e) => e.preventDefault()}>
+              <div className="questionnaire-configure">
+                <div className="questionnaire-configure__visual">
+                  <div className="questionnaire-configure__visual-inner">
+                    <img
+                      src={selectedScopeImage}
+                      alt=""
+                      width={520}
+                      height={520}
+                      decoding="async"
+                      className="questionnaire-configure__hero-img"
+                    />
+                  </div>
                 </div>
-              </form>
-            </div>
+
+                <div className="questionnaire-configure__panel questionnaire-configure__panel--report">
+                  <div className="qreport">
+
+                    {/* Header row */}
+                    <div className="qreport__head">
+                      <div className="qreport__head-copy">
+                        <p className="qreport__eyebrow">Pre-check report</p>
+                        <h1 className="qreport__name">{projectName || 'Untitled project'}</h1>
+                        <p className="qreport__meta">
+                          {address || 'Address pending'}&ensp;·&ensp;{propertyCategoryLabel}&ensp;·&ensp;{workScopeLabel}
+                        </p>
+                      </div>
+                      <span className="qreport__badge">Draft</span>
+                    </div>
+
+                    {/* Metric row */}
+                    <div className="qreport__metrics">
+                      <div className="qreport__metric">
+                        <p className="qreport__metric-label">Permit path</p>
+                        <p className="qreport__metric-value">Alteration permit</p>
+                        <p className="qreport__metric-sub">Routed on scope &amp; ownership</p>
+                      </div>
+                      <div className="qreport__metric">
+                        <p className="qreport__metric-label">Readiness</p>
+                        <p className="qreport__metric-value">Needs docs</p>
+                        <p className="qreport__metric-sub">Add plans/specs for full check</p>
+                      </div>
+                      <div className="qreport__metric">
+                        <p className="qreport__metric-label">Checklist</p>
+                        <p className="qreport__metric-value">Core generated</p>
+                        <p className="qreport__metric-sub">Trade items expand next</p>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <hr className="qreport__rule" />
+
+                    {/* Inputs table */}
+                    <div className="qreport__inputs">
+                      <p className="qreport__inputs-title">Inputs</p>
+                      <dl className="qreport__dl">
+                        <dt>Goal</dt>
+                        <dd>{intentLabel}</dd>
+                        <dt>Responsible</dt>
+                        <dd>{workResponsibleLabel}</dd>
+                        {workResponsible === 'diy' && (
+                          <>
+                            <dt>Own &amp; live on property</dt>
+                            <dd>{ownLiveLabel}</dd>
+                          </>
+                        )}
+                        {workResponsible === 'hired-contractor' && (
+                          <>
+                            <dt>Permit pulled by</dt>
+                            <dd>{permitPulledLabel}</dd>
+                          </>
+                        )}
+                        {workResponsible === 'contractor' && (
+                          <>
+                            <dt>Active insurance</dt>
+                            <dd>{contractorInsuranceLabel}</dd>
+                          </>
+                        )}
+                        <dt>Scope</dt>
+                        <dd>
+                          {workScopeId ? (
+                            <><span className="qreport__dl-kicker">{WORK_SCOPE_OPTIONS.find((o) => o.id === workScopeId)?.category}</span> {workScopeLabel}</>
+                          ) : '—'}
+                        </dd>
+                        {workScopeId === 'windows' && (
+                          <>
+                            <dt>Windows</dt>
+                            <dd>{windowCountLabel} · {windowStyleLabel}</dd>
+                          </>
+                        )}
+                        {workScopeId !== null && workScopeId !== 'windows' && (
+                          <>
+                            <dt>Project stage</dt>
+                            <dd>{scopeStageLabel}</dd>
+                            <dt>Work intensity</dt>
+                            <dd>{scopeComplexityLabel}</dd>
+                          </>
+                        )}
+                      </dl>
+                    </div>
+
+                    {/* Footer hint */}
+                    <p className="qreport__footer-hint">
+                      This is your first pre-check snapshot. Continue to open this project in your workspace.
+                    </p>
+
+                  </div>
+                </div>
+              </div>
+            </form>
           ) : null}
         </div>
       </div>

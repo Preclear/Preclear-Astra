@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { paths } from '../../routes';
 
 type ProjectStatus = 'draft' | 'in-review' | 'approved';
 
@@ -111,7 +112,12 @@ export default function WorkspaceSection({ newProjectHref }: WorkspaceSectionPro
         {projects.map((p) => {
           const s = STATUS_CONFIG[p.status];
           return (
-            <div key={p.id} className="workspace__card">
+            <Link
+              key={p.id}
+              to={`${paths.app}/projects/${p.id}`}
+              state={{ project: p }}
+              className="workspace__card workspace__card--project-link"
+            >
               <div className="workspace__card-top">
                 <span className="workspace__card-type">{p.type}</span>
                 <span className="workspace__card-status" style={{ color: s.color }}>
@@ -123,9 +129,9 @@ export default function WorkspaceSection({ newProjectHref }: WorkspaceSectionPro
               <p className="workspace__card-address">{p.address}</p>
               <div className="workspace__card-footer">
                 <span className="workspace__card-date">{p.date}</span>
-                <button className="workspace__card-open">Open →</button>
+                <span className="workspace__card-open">Open →</span>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
