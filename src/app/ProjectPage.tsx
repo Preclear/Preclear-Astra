@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { paths } from '../routes';
+import { AgentExecutionPlan } from './AgentExecutionPlan';
 import '../styles/precheck-report.css';
 
 type ProjectStatus = 'draft' | 'in-review' | 'approved';
@@ -290,6 +291,51 @@ const ACTIVITY: { time: string; tag: string; msg: ReactNode }[] = [
 
 const SESSION_REF = 'PCR-A4F2-9821';
 
+const STATUS_AGENT_HANDLES = [
+  'Permit application forms · auto-filled from intake',
+  'Site plan generation at code-compliant scale',
+  'Zoning + building code compliance validation',
+  'Contractor license + insurance verification',
+] as const;
+
+const STATUS_YOU_HANDLE = [
+  'Upload 2 bedroom rough-opening measurements',
+  'Confirm contractor details are current',
+  'Approve document pack before submission',
+  'Be on-site for pre-work + final inspections',
+] as const;
+
+const STATUS_FEED_PREVIEW = [
+  {
+    id: 7,
+    state: 'wait',
+    action: 'Waiting on egress measurements',
+    tag: 'IRC R310 WORKSHEET',
+    detail: 'Need bedroom rough-opening height × width to finalize egress compliance check.',
+  },
+  {
+    id: 8,
+    state: 'running',
+    action: 'Drafting plan-review responses',
+    tag: '2 PRE-EMPTIVE MEMOS',
+    detail: 'Preparing examiner answers for setback tolerance + valuation threshold questions.',
+  },
+  {
+    id: 6,
+    state: 'done',
+    action: 'Drafted construction drawings',
+    tag: '3 SHEETS',
+    detail: 'Floor / elevation / section with IRC R310 header detail rendered from intake dimensions.',
+  },
+  {
+    id: 9,
+    state: 'queued',
+    action: 'Will submit to DHCD e-portal',
+    tag: 'BALT-EPERMIT',
+    detail: 'Packet bundle will be filed within 90s of your approval — session authenticated.',
+  },
+] as const;
+
 const Icon = {
   check: (p: React.SVGProps<SVGSVGElement>) => (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" {...p}>
@@ -351,6 +397,15 @@ function projectDetailLine(project: ProjectData): string {
   const zone = project.zone?.trim() || '—';
   const val = project.valuationDisplay?.trim() || '—';
   return `${zone} · ${project.type} · ${val}`;
+}
+
+/** Portal label for execution-plan step titles (demo copy). */
+function portalLabelFromAddress(address: string): string {
+  const a = address.toLowerCase();
+  if (a.includes('baltimore')) return 'Baltimore DHCD';
+  if (a.includes('rockville') || a.includes('maple')) return 'Montgomery County';
+  if (a.includes('annapolis') || a.includes('oak')) return 'Annapolis';
+  return 'Local AHJ';
 }
 
 /** Fills optional demo fields when opening from Home/workspace (same id as fallbacks). */
@@ -467,6 +522,197 @@ function CitationBlock({
   );
 }
 
+const StatusIconUpload = (p: React.SVGProps<SVGSVGElement>) => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" {...p}>
+    <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+function FeedItem({ e }: { e: (typeof STATUS_FEED_PREVIEW)[number] }) {
+  const badge =
+    e.state === 'running' ? (
+      <span className="feed__badge feed__badge--running">
+        <span className="feed__badge-dot" aria-hidden />
+        Now
+      </span>
+    ) : e.state === 'wait' ? (
+      <span className="feed__badge feed__badge--wait">Action needed</span>
+    ) : e.state === 'queued' ? (
+      <span className="feed__badge feed__badge--queued">Queued</span>
+    ) : null;
+
+  return (
+    <li className={`feed__row feed__row--${e.state}`}>
+      <span className={`feed__pip feed__pip--${e.state}`} aria-hidden />
+      <div className="feed__row-body">
+        <div className="feed__row-top">
+          <div className="feed__row-heading">
+            <span className="feed__row-title">{e.action}</span>
+            <span className="feed__row-tag">{e.tag}</span>
+          </div>
+          {badge}
+        </div>
+        <p className="feed__row-detail">{e.detail}</p>
+        {e.state === 'wait' && (
+          <button type="button" className="feed__row-cta">
+            <StatusIconUpload /> Upload measurements
+          </button>
+        )}
+        {e.state === 'running' && (
+          <button type="button" className="feed__row-ghost">View draft →</button>
+        )}
+        {e.state === 'done' && (
+          <button type="button" className="feed__row-ghost">View output →</button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function StatusTab() {
+  return (
+    <div className="tab-panel status-tab">
+      <div className="resp-grid">
+        {/* ── Agent panel ── */}
+        <div className="resp resp--agent">
+          <div className="resp__header">
+            <span className="resp__title">Handled by PreClear</span>
+            <span className="resp__count">4 tasks</span>
+          </div>
+          <ul className="resp__rows">
+            {STATUS_AGENT_HANDLES.map((t, i) => (
+              <li key={i} className="resp__row">
+                {/* green filled check — all PreClear tasks are done */}
+                <svg className="resp__row-icon" width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <circle cx="11" cy="11" r="10" fill="#22c55e" />
+                  <path d="M6.5 11.5l3 3 6-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="resp__row-text">{t}</span>
+                <svg className="resp__row-chev" width="7" height="12" viewBox="0 0 7 12" fill="none">
+                  <path d="M1 1l5 5-5 5" stroke="#c8d0da" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ── User panel ── */}
+        <div className="resp resp--user">
+          <div className="resp__header">
+            <span className="resp__title">You handle</span>
+            <span className="resp__count resp__count--user">4 touches</span>
+          </div>
+          <ul className="resp__rows">
+            {STATUS_YOU_HANDLE.map((t, i) => (
+              <li key={i} className="resp__row">
+                {/* pending — orange dashed circle */}
+                <svg className="resp__row-icon" width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <circle cx="11" cy="11" r="9.5" stroke="#f59e0b" strokeWidth="1.6" strokeDasharray="3.5 2.5" strokeLinecap="round" />
+                </svg>
+                <span className="resp__row-text">{t}</span>
+                <svg className="resp__row-chev" width="7" height="12" viewBox="0 0 7 12" fill="none">
+                  <path d="M1 1l5 5-5 5" stroke="#c8d0da" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="feed-fee-layout">
+        <section className="feed-card">
+          <div className="feed-card__head">
+            <div className="feed-card__title-group">
+              <span className="feed-card__eyebrow">Right now</span>
+              <span className="feed-card__live">
+                <span className="feed-card__live-dot" aria-hidden />
+                Live
+              </span>
+            </div>
+            <button type="button" className="feed-card__all-link">
+              Full activity →
+            </button>
+          </div>
+          <p className="feed-card__sub">Agent&apos;s last four moves</p>
+          <ul className="feed">
+            {STATUS_FEED_PREVIEW.map((e) => (
+              <FeedItem key={e.id} e={e} />
+            ))}
+          </ul>
+        </section>
+
+        <aside className="feed-fee-layout__aside">
+          <section className="panel panel--fee-estimate">
+            <div className="panel__head">
+              <h2 className="panel__title">Fee estimate</h2>
+            </div>
+            <p className="panel__sub">Paid automatically on submission</p>
+            <div className="fees">
+              {FEES.map((f) => (
+                <div key={f.label} className="fee-row">
+                  <div>
+                    <span className="fee-row__label">{f.label}</span>
+                    <span className="fee-row__sub">· {f.sub}</span>
+                  </div>
+                  <span className="fee-row__value">{f.value}</span>
+                </div>
+              ))}
+              <div className="fee-row fee-row--total">
+                <span className="fee-row__label">Agent will charge</span>
+                <span className="fee-row__value">$319.56</span>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function AgentBanner({
+  paused,
+  onPause,
+  runtime,
+  mode = 'Semi-Auto',
+}: {
+  paused: boolean;
+  onPause: () => void;
+  runtime: string;
+  mode?: string;
+}) {
+  return (
+    <div className="agent-banner">
+      <div className="agent-banner__avatar">
+        <img src="/images/Logo/PCWhiteLogo.png" alt="PreClear logo" className="agent-banner__logo" />
+      </div>
+
+      <div className="agent-banner__body">
+        <div className="agent-banner__title">
+          <span className="agent-name">preclear-agent</span> is handling your permit
+        </div>
+        <div className="agent-banner__task">
+          {paused ? 'Paused — resume to continue' : 'Drafting plan-review memos for examiner'}
+          {!paused && (
+            <span className="typing">
+              <span />
+              <span />
+              <span />
+            </span>
+          )}
+          <span className="agent-banner__mode">· {mode}</span>
+        </div>
+      </div>
+
+      <div className="agent-banner__right">
+        <button type="button" className="agent-banner__pause" onClick={onPause}>
+          {paused ? 'Resume' : '■ Pause'}
+        </button>
+        <div className="agent-banner__runtime">runtime {runtime}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectPage() {
   const { projectId } = useParams();
   const location = useLocation();
@@ -474,10 +720,12 @@ export default function ProjectPage() {
   const project = stateProject ?? FALLBACK_PROJECTS.find((p) => p.id === projectId) ?? FALLBACK_PROJECTS[0];
   const imageSrc = scopeImageFromProject(project);
 
-  const [tab, setTab] = useState<'verdict' | 'documents' | 'timeline'>('verdict');
+  const [tab, setTab] = useState<'status' | 'plan' | 'activity' | 'documents' | 'process'>('status');
   const [completed, setCompleted] = useState<string[]>([]);
   const [openChecklistId, setOpenChecklistId] = useState<string | null>('site-plan');
   const [openCitation, setOpenCitation] = useState<string | null>('zoning');
+  const [paused, setPaused] = useState(false);
+  const [runtime] = useState('00:13:31');
 
   const readiness = useMemo(() => {
     const base = 25;
@@ -491,6 +739,13 @@ export default function ProjectPage() {
 
   const openCount = ACTION_ITEMS.length - completed.length;
   const displayProject = projectForDisplay(project);
+  const feedCount = 9;
+  const contentTab =
+    tab === 'documents' ? 'documents' :
+    tab === 'process' ? 'timeline' :
+    tab === 'status' ? 'status' :
+    tab === 'plan' ? 'agentPlan' :
+    'verdict';
 
   return (
     <div className="app-questionnaire">
@@ -579,12 +834,16 @@ export default function ProjectPage() {
                   </div>
                 </div>
 
+                <AgentBanner paused={paused} runtime={runtime} onPause={() => setPaused((p) => !p)} />
+
                 <div className="tabs">
                   {(
                     [
-                      { id: 'verdict' as const, label: 'Verdict & actions', badge: String(openCount) },
+                      { id: 'status' as const, label: 'Status', badge: 'LIVE' },
+                      { id: 'plan' as const, label: 'Agent plan', badge: '6' },
+                      { id: 'activity' as const, label: 'Activity', badge: String(feedCount) },
                       { id: 'documents' as const, label: 'Documents', badge: '6' },
-                      { id: 'timeline' as const, label: 'Timeline & risk', badge: null },
+                      { id: 'process' as const, label: 'Live process', badge: null },
                     ] as const
                   ).map((t) => (
                     <button key={t.id} type="button" className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
@@ -593,47 +852,19 @@ export default function ProjectPage() {
                     </button>
                   ))}
                   <div className="tabs__meta">
-                    <span className="live">Live · syncing requirements</span>
+                    <span className="tabs__live">Streaming</span>
                     <span>v2.3</span>
                   </div>
                 </div>
 
-                {tab === 'verdict' && (
-                  <div className="tab-panel">
-                    <div className="key-stats">
-                      <div className="key-stat">
-                        <span className="key-stat__label">Completeness</span>
-                        <div className="key-stat__value">
-                          {Math.round((completed.length / ACTION_ITEMS.length) * 100)}
-                          <small>%</small>
-                        </div>
-                        <span className="key-stat__delta up">
-                          {completed.length} of {ACTION_ITEMS.length} actions
-                        </span>
-                      </div>
-                      <div className="key-stat">
-                        <span className="key-stat__label">Code checks</span>
-                        <div className="key-stat__value">
-                          3<small> / 3</small>
-                        </div>
-                        <span className="key-stat__delta">1 passed · 2 review</span>
-                      </div>
-                      <div className="key-stat">
-                        <span className="key-stat__label">Rejection risk</span>
-                        <div className="key-stat__value">
-                          17<small>%</small>
-                        </div>
-                        <span className="key-stat__delta down">−4% w/ doc fix</span>
-                      </div>
-                      <div className="key-stat">
-                        <span className="key-stat__label">Approval window</span>
-                        <div className="key-stat__value">
-                          8–11<small>d</small>
-                        </div>
-                        <span className="key-stat__delta">median · your jurisdiction</span>
-                      </div>
-                    </div>
+                {contentTab === 'status' && <StatusTab />}
 
+                {contentTab === 'agentPlan' && (
+                  <AgentExecutionPlan portalName={portalLabelFromAddress(displayProject.address)} stepCount={6} />
+                )}
+
+                {contentTab === 'verdict' && (
+                  <div className="tab-panel">
                     <div className="panel-grid">
                       <section className="panel">
                         <div className="panel__head">
@@ -757,7 +988,7 @@ export default function ProjectPage() {
                   </div>
                 )}
 
-                {tab === 'documents' && (
+                {contentTab === 'documents' && (
                   <div className="tab-panel">
                     <div className="panel-grid" style={{ gridTemplateColumns: '1.5fr 1fr' }}>
                       <section className="panel">
@@ -852,49 +1083,10 @@ export default function ProjectPage() {
                         </div>
                       </section>
                     </div>
-
-                    <hr className="hr" />
-
-                    <section className="panel">
-                      <div className="panel__head">
-                        <h2 className="panel__title">Submission preview</h2>
-                        <button type="button" className="panel__action">
-                          Download packet →
-                        </button>
-                      </div>
-                      <p className="panel__sub">Final bundle ordered for e-permit style submissions</p>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(6, 1fr)',
-                          gap: 8,
-                          marginTop: 8,
-                        }}
-                      >
-                        {['001 COVER', '002 APP', '003 SITE', '004 DRAW-1', '005 DRAW-2', '006 DRAW-3'].map((l) => (
-                          <div
-                            key={l}
-                            style={{
-                              aspectRatio: '0.77',
-                              border: '1px solid var(--rule)',
-                              borderRadius: 4,
-                              background: 'var(--surface-2)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'flex-end',
-                              padding: 8,
-                              backgroundImage: 'repeating-linear-gradient(0deg, transparent 0 10px, rgba(0,0,0,0.03) 10px 11px)',
-                            }}
-                          >
-                            <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ink-4)', letterSpacing: '0.05em' }}>{l}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
                   </div>
                 )}
 
-                {tab === 'timeline' && (
+                {contentTab === 'timeline' && (
                   <div className="tab-panel">
                     <div className="panel-grid" style={{ gridTemplateColumns: '1.5fr 1fr' }}>
                       <section className="panel">
