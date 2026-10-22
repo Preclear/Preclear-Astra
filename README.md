@@ -36,7 +36,7 @@ Validate with `npm run build` and `python -m pytest backend/tests -q`.
 
 ## Data ingestion
 
-Install `requirements-municipal.txt`, then run `python -m municipal --help`.
+Install `requirements-municipal.txt`, then run `python -m municipal.pipeline --help`.
 The workflow supports Apify collection and `export-supabase` / `extract-export`
 for existing raw documents and chunks. Candidate rules require source evidence,
 manual review and an expiry before `import-reviewed` writes normalized rules.
