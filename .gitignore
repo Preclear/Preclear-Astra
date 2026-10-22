@@ -22,3 +22,8 @@ vite.config.d.ts
 .vscode/
 *.swp
 .DS_Store
+
+__pycache__/
+.pytest_cache/
+.venv/
+!.env.example

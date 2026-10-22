@@ -73,6 +73,7 @@ export default function AppShell() {
 
   return (
     <div className="app-shell">
+      <p role="note" style={{padding: 16, textAlign: "center"}}>Workspace preview: sample plans and reports are illustrative. <Link to="/permit-agent">Use Permit Assistant for reviewed municipal lookups.</Link></p>
       <header className="app-shell__header">
         <div className="app-shell__header-inner">
           <Link to={paths.home} className="app-shell__brand" aria-label="PreClear home">

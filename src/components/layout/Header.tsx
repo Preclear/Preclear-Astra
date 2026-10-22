@@ -36,7 +36,7 @@ export default function Header({
       <header className="site-header site-header--dark site-header--minimal">
         <div className="site-header__banner">
           <p className="site-header__banner-text">
-            Permits for the State of Maryland are now live
+            Municipal permit research — verify requirements with your jurisdiction
           </p>
         </div>
         <div className="site-header__inner">
@@ -69,7 +69,7 @@ export default function Header({
     >
       <div className="site-header__banner">
         <p className="site-header__banner-text">
-          Permits for the State of Maryland are now live
+          Municipal permit research — verify requirements with your jurisdiction
         </p>
       </div>
       <div className="site-header__inner">
@@ -82,6 +82,7 @@ export default function Header({
           <span className="site-header__brand-text">PreClear</span>
         </Link>
         <nav className="site-header__nav" aria-label="Primary">
+          <NavLink to="/permit-agent">Permit Assistant</NavLink>
           <NavLink
             to={paths.howItWorks}
             className={({ isActive }) =>
