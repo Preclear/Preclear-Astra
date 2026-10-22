@@ -105,6 +105,7 @@ export default function ProductPage() {
 
   return (
     <div className="hiw">
+      <aside role="note" style={{padding: "16px 24px", textAlign: "center", background: "#f1f5f9", color: "#0f172a"}}>Product preview: illustrations, plan tables and workspace examples are not completed permit evaluations. <Link to="/permit-agent">Open the implemented Permit Assistant</Link> for reviewed source lookups. Paid plans and automatic filing are not available through this integration.</aside>
 
       {/* ── Hero ── */}
       <section className="hiw__hero">
@@ -308,7 +309,7 @@ export default function ProductPage() {
                 <p className="hiw-pricing__price">
                   {proBilling === 'monthly' ? (
                     <>
-<aside role="note" style={{padding: "16px 24px", textAlign: "center", background: "#f1f5f9", color: "#0f172a"}}>Product preview: illustrations, plan tables and workspace examples are not completed permit evaluations. <Link to="/permit-agent">Open the implemented Permit Assistant</Link> for reviewed source lookups. Paid plans and automatic filing are not available through this integration.</aside>
+
                       $39<span className="hiw-pricing__price-unit">/month</span>
                     </>
                   ) : (
