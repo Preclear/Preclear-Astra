@@ -170,6 +170,7 @@ export default function HowItWorksPage() {
 
   return (
     <>
+<aside role="note" style={{padding: "16px 24px", textAlign: "center", background: "#f1f5f9", color: "#0f172a"}}>Product preview: illustrations, plan tables and workspace examples are not completed permit evaluations. <Link to="/permit-agent">Open the implemented Permit Assistant</Link> for reviewed source lookups. Paid plans and automatic filing are not available through this integration.</aside>
       {/* ═══════════════════════════════════════════
           FRAME 1 — Enter Your Project
       ═══════════════════════════════════════════ */}
@@ -296,7 +297,7 @@ export default function HowItWorksPage() {
                 aria-hidden="true">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
-              Works across 50+ local jurisdictions
+              Coverage depends on reviewed municipal rules
             </p>
           </div>
         </div>
@@ -721,7 +722,7 @@ export default function HowItWorksPage() {
             <ul className="hiw4__trust" aria-label="Trust signals">
               <li>Ready for submission</li>
               <li>No surprises at review</li>
-              <li>50+ jurisdictions</li>
+              <li>Reviewed jurisdictions</li>
             </ul>
           </div>
 

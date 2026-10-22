@@ -3,22 +3,22 @@ import { Link } from 'react-router-dom';
 
 const PRICING_STARTER_FEATURES = [
   '3 permit pre-checks per month',
-  'Instant yes/no permit determination',
-  'Basic county lookup (50+ jurisdictions)',
-  'Downloadable PDF checklist',
+  'Sourced permit lookup with uncertainty handling',
+  'Reviewed jurisdiction lookup',
+  'Source-linked requirements',
   'Email support',
 ] as const;
 
 const PRICING_PRO_FEATURES = [
-  'Unlimited permit pre-checks',
-  'Full threshold question analysis',
-  'Jurisdiction auto-detection',
-  'Auto-filled permit application forms',
-  'Inspection prep guide per project',
-  'Code citation with every result',
+  'Conversational permit research',
+  'Project attribute questions',
+  'Jurisdiction selection',
+  'Linked municipal source requirements',
+  'Municipal source references',
+  'Citations when reviewed rules match',
   'API access for integrations',
   'Priority email support (next business day)',
-  'Project history saved',
+  'Conversation history during this session',
 ] as const;
 
 const PRICING_COMPARE_ROWS = [
@@ -67,7 +67,7 @@ const COMMON_QUESTIONS = [
   },
   {
     q: 'Which jurisdictions do you support?',
-    a: 'We cover 50+ counties and municipalities today, with new jurisdictions added regularly. Enter your address in PreClear to confirm support for your property.',
+    a: 'The assistant lists jurisdictions with current reviewed rules. Source coverage has not yet been verified; availability depends on accessible municipal data.',
   },
   {
     q: 'Is this a substitute for a licensed architect or permit expediter?',
@@ -79,7 +79,7 @@ const COMMON_QUESTIONS = [
   },
   {
     q: 'Can I export my pre-check results?',
-    a: 'Yes. Paid plans include exportable summaries and PDF checklists you can attach to permit packages or share with contractors and consultants.',
+    a: 'The assistant currently displays retrieved requirements and source links. Export and paid-plan capabilities shown in previews are not part of the live lookup integration.',
   },
 ] as const;
 
@@ -89,6 +89,7 @@ export default function PricingPage() {
 
   return (
     <>
+<aside role="note" style={{padding: "16px 24px", textAlign: "center", background: "#f1f5f9", color: "#0f172a"}}>Product preview: illustrations, plan tables and workspace examples are not completed permit evaluations. <Link to="/permit-agent">Open the implemented Permit Assistant</Link> for reviewed source lookups. Paid plans and automatic filing are not available through this integration.</aside>
       <section className="hiw-pricing" aria-labelledby="hiw-pricing-heading">
         <div className="hiw-pricing__inner">
           <p className="hiw-pricing__eyebrow">Sick of settling for makeshift solutions?</p>

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import WorkspaceSection from '../components/workspace/WorkspaceSection';
 import { paths } from '../routes';
@@ -25,6 +26,7 @@ const SUGGESTIONS = [
 ];
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const [value, setValue] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [fade, setFade] = useState(true);
@@ -42,6 +44,7 @@ export default function HomePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    navigate(`/permit-agent?question=${encodeURIComponent(value)}`);
   };
 
   return (
@@ -53,10 +56,9 @@ export default function HomePage() {
       <img src="/images/Home/HeroSection/HeroHold.png" className="hero-deco hero-deco--hold" aria-hidden="true" />
 
       <div className="home__content">
-        <h1 className="home__title">Is Your Project Permit Ready?</h1>
+        <h1 className="home__title">Homeowner Permit Compliance Checker</h1>
         <p className="home__subtitle">
-          Run a permit compliance pre-check before you submit. Catch zoning issues,
-          missing documents, and code conflicts in minutes, not weeks.
+          Ask about your project, look up reviewed municipal rules, and read the original sources. Coverage depends on available reviewed rules.
         </p>
 
         <form className="hero-search" onSubmit={handleSubmit}>

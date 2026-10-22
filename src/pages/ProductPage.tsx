@@ -21,89 +21,39 @@ const FAQ_CARD_IMAGES = [
 
 const PRICING_STARTER_FEATURES = [
   '3 permit pre-checks per month',
-  'Instant yes/no permit determination',
-  'Basic county lookup (50+ jurisdictions)',
-  'Downloadable PDF checklist',
+  'Sourced permit lookup with uncertainty handling',
+  'Reviewed jurisdiction lookup',
+  'Source-linked requirements',
   'Email support',
 ] as const;
 
 const PRICING_PRO_FEATURES = [
-  'Unlimited permit pre-checks',
-  'Full threshold question analysis',
-  'Jurisdiction auto-detection',
-  'Auto-filled permit application forms',
-  'Inspection prep guide per project',
-  'Code citation with every result',
+  'Conversational permit research',
+  'Project attribute questions',
+  'Jurisdiction selection',
+  'Linked municipal source requirements',
+  'Municipal source references',
+  'Citations when reviewed rules match',
   'API access for integrations',
   'Priority email support (next business day)',
-  'Project history saved',
+  'Conversation history during this session',
 ] as const;
 
-const SATISFIED_CUSTOMERS: {
-  label: string;
-  description: string;
-  stat: string;
-  name: string;
-}[] = [
-  {
-    label: 'On-time payments',
-    description:
-      'Teams that switched to PreClear report faster quoting cycles and fewer back-and-forth revisions with jurisdictions.',
-    stat: '76%',
-    name: 'Sarah B. James',
-  },
-  {
-    label: 'Quote turnaround',
-    description:
-      'Average time from project intake to a shareable permit summary, based on internal beta cohort data.',
-    stat: '4x',
-    name: 'Marcus T. Chen',
-  },
-  {
-    label: 'Support satisfaction',
-    description:
-      'Weighted score from post-session surveys where users rated clarity of requirements and next steps.',
-    stat: '5.0',
-    name: 'Elena V. Ruiz',
-  },
-  {
-    label: 'First-pass completeness',
-    description:
-      'Share of pre-checks that surfaced every required document for the selected scope before filing.',
-    stat: '68%',
-    name: 'Jordan K. Patel',
-  },
-  {
-    label: 'Hours saved',
-    description:
-      'Self-reported median weekly time reclaimed by replacing manual county site research with PreClear.',
-    stat: '12 hrs',
-    name: 'Alex D. Morgan',
-  },
-  {
-    label: 'Jurisdictions covered',
-    description:
-      'Active lookup templates and rule packs available for county and municipal permit pre-checks.',
-    stat: '50+',
-    name: 'Riley N. Foster',
-  },
-  {
-    label: 'Renewal retention',
-    description:
-      'Professional plan accounts that renewed after the first 90 days during pilot programs.',
-    stat: '92%',
-    name: 'Taylor S. Brooks',
-  },
+const SATISFIED_CUSTOMERS = [
+  { label: 'Source collection', description: 'Python reuses municipal documents or collects pages through Apify.', stat: 'Sources', name: 'Ingestion' },
+  { label: 'Reviewed rules', description: 'Rules retain source evidence, review dates and expiry in PostgreSQL.', stat: 'Review', name: 'Data quality' },
+  { label: 'Project lookup', description: 'FastAPI compares project attributes to jurisdiction-specific rules.', stat: 'Lookup', name: 'Rule matching' },
+  { label: 'Conversation', description: 'OpenAI calls a read-only lookup tool and explains retrieved requirements.', stat: 'Explain', name: 'Aura' },
 ];
 
 const FAQS = [
   {
     q: 'What is a permit pre-check?',
-    a: 'A permit pre-check reviews your project scope, address, and property type against local zoning rules and building codes before you submit. It helps catch problems early and ensures your application is complete.',
+    a: 'A permit pre-check reviews your project scope, address, and property type against local zoning rules and building codes before you submit. It supports research; your municipality determines whether an application is complete.',
   },
   {
     q: 'What documents do I need?',
-    a: 'Documents vary by project type. Common requirements include site plans, floor plans, contractor licenses, and proof of ownership. PreClear lists exactly what your jurisdiction requires.',
+    a: 'Documents vary by project type. Common requirements include site plans, floor plans, contractor licenses, and proof of ownership. PreClear shows available reviewed requirements and asks for verification when data is missing.',
   },
   {
     q: 'Will my project pass inspection?',
@@ -111,7 +61,7 @@ const FAQS = [
   },
   {
     q: 'Stop checking permits the old way.',
-    a: 'Most homeowners spend hours on county websites only to get rejected on technicalities. PreClear automates the entire compliance lookup in minutes.',
+    a: 'Most homeowners spend hours on county websites only to get rejected on technicalities. PreClear provides a sourced lookup for supported project attributes and jurisdictions.',
   },
 ];
 
@@ -122,7 +72,7 @@ const COMMON_QUESTIONS = [
   },
   {
     q: 'Which jurisdictions do you support?',
-    a: 'We cover 50+ counties and municipalities today, with new jurisdictions added regularly. Enter your address in PreClear to confirm support for your property.',
+    a: 'The assistant lists jurisdictions with current reviewed rules. Source coverage has not yet been verified; availability depends on accessible municipal data.',
   },
   {
     q: 'Is this a substitute for a licensed architect or permit expediter?',
@@ -134,7 +84,7 @@ const COMMON_QUESTIONS = [
   },
   {
     q: 'Can I export my pre-check results?',
-    a: 'Yes. Paid plans include exportable summaries and PDF checklists you can attach to permit packages or share with contractors and consultants.',
+    a: 'The assistant currently displays retrieved requirements and source links. Export and paid-plan capabilities shown in previews are not part of the live lookup integration.',
   },
 ] as const;
 
@@ -164,7 +114,7 @@ export default function ProductPage() {
         </h1>
         <p className="hiw__subtitle">
           Run a permit pre-check before you submit. We compare your project to local zoning
-          and building codes so you catch issues in minutes, not weeks. It's like having a local building inspector in your pocket.
+          and available reviewed permit rules. Confirm requirements with your municipality before submitting.
         </p>
       </section>
 
@@ -358,6 +308,7 @@ export default function ProductPage() {
                 <p className="hiw-pricing__price">
                   {proBilling === 'monthly' ? (
                     <>
+<aside role="note" style={{padding: "16px 24px", textAlign: "center", background: "#f1f5f9", color: "#0f172a"}}>Product preview: illustrations, plan tables and workspace examples are not completed permit evaluations. <Link to="/permit-agent">Open the implemented Permit Assistant</Link> for reviewed source lookups. Paid plans and automatic filing are not available through this integration.</aside>
                       $39<span className="hiw-pricing__price-unit">/month</span>
                     </>
                   ) : (
@@ -410,7 +361,7 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* ── Satisfied customers ── */}
+      {/* ── How the implementation works ── */}
       <section className="hiw-tcust" aria-labelledby="hiw-tcust-heading">
         <div className="hiw-tcust__inner">
 

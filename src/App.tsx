@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './styles/global.css';
 import Layout from './components/layout/Layout';
+import PermitAssistant from './app/PermitAssistant';
 import HomePage from './pages/HomePage';
 import ProductPage from './pages/ProductPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -21,6 +22,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/permit-agent" element={<PermitAssistant />} />
         <Route path={paths.app} element={<AppShell />}>
           <Route index element={<DashboardPage />} />
           <Route path="questionnaire" element={<NewProjectQuestionnairePage />} />
