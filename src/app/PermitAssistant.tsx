@@ -2,91 +2,143 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { paths } from '../routes';
-import './questionnaire/configureAuraChat.css';
+import './permitAssistant.css';
 
 type Rule = { id: string; requirement: string; source_url: string; code_citation: string };
 type Lookup = { status: string; missing_attributes: string[]; rules: Rule[] };
 type Message = { role: 'user' | 'assistant'; content: string; lookups?: Lookup[] };
+type Readiness = 'checking' | 'unavailable' | 'signin' | 'empty' | 'ready' | 'error';
+const starters = ['Do I need a permit to replace my windows?', 'What permits might I need to build a deck?', 'What should I check before remodeling my kitchen?'];
 
 async function request(path: string, signal: AbortSignal, body?: object) {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null;
-  if (!session) throw new Error('Please sign in to use permit lookup.');
+  if (!session) throw new Error('Your session has ended. Please sign in again.');
   const response = await fetch(`/api/${path}`, {
     method: body ? 'POST' : 'GET', signal,
     headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Permit lookup is unavailable.');
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Your session has ended. Please sign in again.');
+    if (response.status === 503) throw new Error('Permit research is temporarily unavailable. Your question is saved below; please try again later.');
+    throw new Error('We could not complete this lookup. Please try again.');
+  }
   return data;
 }
 
 export default function PermitAssistant({ onClose, scopeLabel }: { onClose?: () => void; scopeLabel?: string }) {
-  const [jurisdictions, setJurisdictions] = useState<{id: string; name: string}[]>([]);
+  const [jurisdictions, setJurisdictions] = useState<{ id: string; name: string }[]>([]);
   const [jurisdiction, setJurisdiction] = useState('');
   const [draft, setDraft] = useState(() => new URLSearchParams(window.location.search).get('question') || (scopeLabel ? `What permits may be required for ${scopeLabel.toLowerCase()}?` : ''));
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState('');
+  const [readiness, setReadiness] = useState<Readiness>('checking');
+  const [signedIn, setSignedIn] = useState(false);
+  const [checkVersion, setCheckVersion] = useState(0);
   const [sending, setSending] = useState(false);
+  const [pendingQuestion, setPendingQuestion] = useState('');
   const active = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  const conversationEnd = useRef<HTMLDivElement>(null);
+  const previousUser = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
-    const controller = new AbortController();
-    request('jurisdictions', controller.signal).then(data => {
-      setJurisdictions(data);
-      if (!data.length) setError('No reviewed jurisdictions are available yet. Confirm requirements with your municipality.');
-    }).catch(e => { if (!controller.signal.aborted) setError(e.message); });
-    return () => { controller.abort(); active.current?.abort(); };
+    mounted.current = true;
+    const subscription = supabase?.auth.onAuthStateChange((_event, session) => {
+      const userId = session?.user.id ?? null;
+      setSignedIn(Boolean(session));
+      if (previousUser.current !== userId) {
+        previousUser.current = userId;
+        active.current?.abort();
+        setMessages([]); setJurisdiction(''); setCheckVersion(v => v + 1);
+      }
+    });
+    return () => { mounted.current = false; active.current?.abort(); subscription?.data.subscription.unsubscribe(); };
   }, []);
 
+  useEffect(() => {
+    let current = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    setReadiness('checking'); setError(''); setJurisdictions([]);
+    async function check() {
+      try {
+        const response = await fetch('/api/health', { signal: controller.signal });
+        if (!response.ok) throw new Error('Service check failed');
+        const health = await response.json();
+        const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+        if (controller.signal.aborted) return;
+        setSignedIn(Boolean(session));
+        if (!health.lookup_configured || !health.chat_configured || health.auth_configured === false || !supabase) {
+          setReadiness('unavailable'); return;
+        }
+        if (!session) { setReadiness('signin'); return; }
+        const data = await request('jurisdictions', controller.signal);
+        if (controller.signal.aborted) return;
+        setJurisdictions(data);
+        setJurisdiction(current => data.some((item: {id: string}) => item.id === current) ? current : '');
+        setReadiness(data.length ? 'ready' : 'empty');
+      } catch {
+        if (current && mounted.current) setReadiness('error');
+      } finally { window.clearTimeout(timeout);
+      }
+    }
+    void check();
+    return () => { current = false; controller.abort(); window.clearTimeout(timeout); };
+  }, [checkVersion]);
+
+  useEffect(() => { conversationEnd.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [messages, sending]);
+
   async function send() {
-    if (!draft.trim() || !jurisdiction || sending) return;
+    if (!draft.trim() || !jurisdiction || sending || readiness !== 'ready') return;
     const question = draft.trim();
     const controller = new AbortController(); active.current = controller;
     const timer = window.setTimeout(() => controller.abort(), 115000);
-    setError(''); setSending(true); setDraft('');
-    setMessages(prev => [...prev, { role: 'user', content: question }]);
+    setError(''); setSending(true); setPendingQuestion(question); setDraft('');
+    // Commit a user/assistant pair only after a successful response; failed retries never duplicate history.
     try {
       const result = await request('chat', controller.signal, { jurisdiction_id: jurisdiction, question,
-        history: messages.slice(-12).map(({role, content}) => ({role, content})) });
-      if (!controller.signal.aborted) setMessages(prev => [...prev, {role: 'assistant', content: result.answer, lookups: result.lookups}]);
+        history: messages.slice(-12).map(({ role, content }) => ({ role, content })) });
+      if (controller.signal.aborted) throw new Error('Lookup stopped.');
+      if (mounted.current) setMessages(prev => [...prev, { role: 'user', content: question }, { role: 'assistant', content: result.answer, lookups: result.lookups }]);
     } catch (e) {
-      setError(controller.signal.aborted ? 'Lookup stopped. You can try again.' : (e instanceof Error ? e.message : 'Lookup failed.'));
-      setDraft(question);
-    } finally { window.clearTimeout(timer); setSending(false); active.current = null; }
+      if (mounted.current) {
+        setError(controller.signal.aborted ? 'Lookup stopped. Your question is ready to try again.' : (e instanceof Error ? e.message : 'Lookup failed. Please try again.'));
+        setDraft(question);
+      }
+    } finally { window.clearTimeout(timer); if (mounted.current) setSending(false); active.current = null; }
   }
 
-  return <section className="configure-aura" style={{maxWidth: 960, margin: '0 auto', padding: 24}}>
-    <header className="configure-aura__top">
-      {onClose ? <button onClick={onClose} type="button">Back</button> : <Link to={paths.home}>PreClear</Link>}
-      <h1>Homeowner Permit Compliance Checker</h1>
-      <Link to={paths.signIn}>Sign in</Link>
+  const returnPath = `/permit-agent${draft ? `?question=${encodeURIComponent(draft)}` : ''}`;
+  const signInPath = `${paths.signIn}?returnTo=${encodeURIComponent(returnPath)}`;
+  const status = {
+    checking: ['Checking availability', 'We’re checking the connection to permit research.'],
+    unavailable: ['Permit research is currently unavailable', 'Aura cannot retrieve municipal requirements right now. You can prepare your question below and check again later.'],
+    signin: ['Sign in to start your research', 'Use your PreClear account to access reviewed municipal requirements. Your question will come with you.'],
+    empty: ['No reviewed jurisdictions are available yet', 'Please confirm requirements directly with your municipality while reviewed sources are being added.'],
+    ready: ['Connected to permit research', 'Choose your jurisdiction so Aura can look up the rules that apply to your project.'],
+    error: ['We couldn’t connect to permit research', 'Check your connection and try again. Your question stays here.'],
+  }[readiness];
+  const hint = readiness !== 'ready' ? (readiness === 'signin' ? 'Sign in to send your question.' : 'Sending is paused until permit research is available.') : !jurisdiction ? 'Select a jurisdiction before sending.' : 'Describe the work, dimensions, and anything you plan to change.';
+
+  return <section className="permit-assistant" aria-labelledby="aura-heading">
+    <header className="permit-assistant__header">
+      {onClose ? <button className="permit-assistant__text-button" onClick={onClose} type="button">← Back</button> : <Link className="permit-assistant__brand" to={paths.home}>PreClear<span> / Permit research</span></Link>}
+      {signedIn ? <span className="permit-assistant__session">Signed in</span> : <Link className="permit-assistant__sign-in" to={signInPath}>Sign in <span aria-hidden="true">↗</span></Link>}
     </header>
-    <p>Ask Aura about your project. Answers use reviewed municipal rules and link to their sources. Missing or conflicting rules require verification with your jurisdiction.</p>
-    <label>Jurisdiction <select value={jurisdiction} disabled={sending} onChange={e => {setJurisdiction(e.target.value); setMessages([]); setError('');}}>
-      <option value="">Select a jurisdiction</option>
-      {jurisdictions.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
-    </select></label>
-    {error && <p role="alert">{error}</p>}
-    <div role="log" aria-live="polite" aria-label="Permit conversation" style={{minHeight: 200, padding: '24px 0'}}>
-      {messages.map((message, i) => <article key={i} style={{marginBottom: 24}}>
-        <strong>{message.role === 'user' ? 'You' : 'Aura'}</strong>
-        <p style={{whiteSpace: 'pre-wrap'}}>{message.content}</p>
-        {message.lookups?.map((lookup, k) => <div key={k}>
-          <p>{lookup.status.replace(/_/g, ' ')}</p>
-          {lookup.missing_attributes.length > 0 && <p>Details needed: {lookup.missing_attributes.join(', ')}</p>}
-          <ul>{lookup.rules.map(rule => <li key={rule.id}>{rule.requirement}{' '}
-            {/^(https?):\/\//i.test(rule.source_url) && <a href={rule.source_url} target="_blank" rel="noreferrer">{rule.code_citation || 'Municipal source'}</a>}
-          </li>)}</ul>
-        </div>)}
-      </article>)}
-      {sending && <p>Looking up reviewed requirements…</p>}
+    <div className="permit-assistant__body">
+      <div className="permit-assistant__intro"><span className="permit-assistant__eyebrow">YOUR PROJECT. YOUR LOCAL RULES.</span><h1 id="aura-heading">Let’s make permits clearer.</h1><p>Meet Aura, your permit research assistant. Describe what you’re planning, then explore reviewed requirements with links to the municipal sources.</p></div>
+      <div className={`permit-assistant__status permit-assistant__status--${readiness}`} role="status"><span className="permit-assistant__status-dot" aria-hidden="true"/><div><strong>{status[0]}</strong><p>{status[1]}</p></div>{readiness === 'signin' ? <Link className="permit-assistant__secondary" to={signInPath}>Sign in</Link> : readiness !== 'ready' && <button className="permit-assistant__secondary" type="button" disabled={readiness === 'checking'} onClick={() => setCheckVersion(v => v + 1)}>{readiness === 'checking' ? 'Checking…' : 'Check again'}</button>}</div>
+      <div className="permit-assistant__location"><div><label htmlFor="permit-jurisdiction">Where is your project?</label><p>Requirements vary by municipality.</p></div><select id="permit-jurisdiction" value={jurisdiction} disabled={sending || readiness !== 'ready'} onChange={e => { setJurisdiction(e.target.value); setMessages([]); setError(''); }}><option value="">Select a jurisdiction</option>{jurisdictions.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}</select></div>
+      <div className="permit-assistant__conversation" role="log" aria-live="polite" aria-label="Permit conversation">
+        {!messages.length && <div className="permit-assistant__welcome"><span className="permit-assistant__avatar" aria-hidden="true">A</span><div><h2>What are you planning?</h2><p>Start with your project in everyday words. I’ll help identify what needs checking and where the information comes from.</p><div className="permit-assistant__starters">{starters.map(question => <button type="button" disabled={sending} key={question} onClick={() => { setDraft(question); document.getElementById('permit-question')?.focus(); }}>{question}<span aria-hidden="true">↗</span></button>)}</div></div></div>}
+        {messages.map((message, i) => <article key={i} className={`permit-assistant__message permit-assistant__message--${message.role}`}><strong>{message.role === 'user' ? 'You' : 'Aura'}</strong><p>{message.content}</p>{message.lookups?.map((lookup, k) => <div className="permit-assistant__sources" key={k}><span className="permit-assistant__eyebrow">{lookup.status.replace(/_/g, ' ')}</span>{lookup.missing_attributes.length > 0 && <p>Details needed: {lookup.missing_attributes.join(', ')}</p>}{lookup.rules.map(rule => <div className="permit-assistant__source" key={rule.id}><p>{rule.requirement}</p>{/^(https?):\/\//i.test(rule.source_url) && <a href={rule.source_url} target="_blank" rel="noreferrer">{rule.code_citation || 'Read municipal source'} ↗</a>}</div>)}</div>)}</article>)}
+        {sending && <><article className="permit-assistant__message permit-assistant__message--user"><strong>You</strong><p>{pendingQuestion}</p></article><p className="permit-assistant__loading">Aura is looking up reviewed requirements…</p></>}<div ref={conversationEnd}/>
+      </div>
+      {error && <p className="permit-assistant__error" role="alert">{error}</p>}
+      <form className="permit-assistant__composer" onSubmit={e => { e.preventDefault(); void send(); }}><label htmlFor="permit-question">Tell Aura about your project</label><textarea id="permit-question" value={draft} disabled={sending} maxLength={4000} rows={3} aria-describedby="permit-hint" placeholder="For example, I’m replacing three windows without changing the openings…" onChange={e => setDraft(e.target.value)}/><div className="permit-assistant__composer-bottom"><p id="permit-hint">{hint}</p>{sending ? <button className="permit-assistant__submit" type="button" onClick={() => active.current?.abort()}>Stop lookup</button> : <button className="permit-assistant__submit" type="submit" disabled={readiness !== 'ready' || !jurisdiction || !draft.trim()}>Ask Aura <span aria-hidden="true">↑</span></button>}</div></form>
+      <p className="permit-assistant__disclaimer">Research support, not permit approval. Confirm missing or conflicting requirements with your jurisdiction.</p>
     </div>
-    <form onSubmit={e => {e.preventDefault(); void send();}}>
-      <label htmlFor="permit-question">Your project question</label>
-      <textarea id="permit-question" value={draft} maxLength={4000} rows={3} style={{display:'block', width:'100%', margin:'12px 0'}} onChange={e => setDraft(e.target.value)} />
-      <button type="submit" disabled={sending || !jurisdiction || !draft.trim()}>Ask Aura</button>{' '}
-      {sending && <button type="button" onClick={() => active.current?.abort()}>Stop</button>}
-    </form>
-    <p>Research support only. PreClear does not issue permits or guarantee approval.</p>
   </section>;
 }

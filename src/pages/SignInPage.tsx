@@ -1,18 +1,14 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  supabase,
-  supabaseAnonKey,
-  supabaseUrl,
-  isSupabaseConfigured,
-} from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { paths } from '../routes';
 
-const emailSignupUrl = isSupabaseConfigured
-  ? `${supabaseUrl}/functions/v1/email-signup`
-  : '';
-
-const LOGOS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+function safeReturnPath() {
+  const candidate = new URLSearchParams(window.location.search).get('returnTo');
+  if (!candidate || !candidate.startsWith('/') || candidate.startsWith('//') || candidate.includes('\\')) return paths.app;
+  const url = new URL(candidate, window.location.origin);
+  return url.origin === window.location.origin ? url.pathname + url.search + url.hash : paths.app;
+}
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -21,31 +17,19 @@ export default function SignInPage() {
   const [honeypot, setHoneypot] = useState('');
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
   const [emailSubmitting, setEmailSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setEmailError(null);
-    setEmailSuccess(null);
+
     setEmailSubmitting(true);
     try {
-      const response = await fetch(emailSignupUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${supabaseAnonKey}`,
-          apikey: supabaseAnonKey,
-        },
-        body: JSON.stringify({ email, password, website: honeypot }),
-      });
-      const data: { error?: string; message?: string } =
-        await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setEmailError(data.error ?? 'Something went wrong. Please try again.');
-        return;
-      }
-      setEmailSuccess(data.message ?? 'Check your email for next steps.');
+      if (!supabase) { setEmailError('Sign-in is temporarily unavailable. Please try again later.'); return; }
+      if (honeypot) return;
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) { setEmailError(error.message); return; }
+      window.location.assign(safeReturnPath());
     } catch {
       setEmailError('Network error. Check your connection and try again.');
     } finally {
@@ -53,17 +37,19 @@ export default function SignInPage() {
     }
   };
 
-  const handleGoogleSignUp = async () => {
+  const handleGoogleSignIn = async () => {
     setGoogleError(null);
-    if (!supabase) return;
+    if (!supabase) { setGoogleError('Sign-in is temporarily unavailable. Please try again later.'); return; }
+    try {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}${paths.app}`,
+        redirectTo: `${window.location.origin}${safeReturnPath()}`,
         queryParams: { prompt: 'select_account' },
       },
     });
     if (error) setGoogleError(error.message);
+    } catch { setGoogleError('Network error. Check your connection and try again.'); }
   };
 
   return (
@@ -74,9 +60,11 @@ export default function SignInPage() {
         </div>
 
         <div className="signup-page__auth">
+          {!isSupabaseConfigured && <p className="signup-page__error" role="status">Sign-in is temporarily unavailable. Please try again later.</p>}
           <button
             type="button"
-            onClick={handleGoogleSignUp}
+            disabled={!isSupabaseConfigured}
+            onClick={handleGoogleSignIn}
             className="signup-page__google-btn"
           >
             <img
@@ -96,9 +84,6 @@ export default function SignInPage() {
             <span className="signup-page__divider-line" />
           </div>
 
-          {emailSuccess ? (
-            <p className="signup-page__success" role="status">{emailSuccess}</p>
-          ) : (
             <form onSubmit={handleSubmit} className="signup-page__form">
               <input
                 type="text"
@@ -138,7 +123,7 @@ export default function SignInPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    autoComplete="new-password"
+                    autoComplete="current-password"
                     className="signup-page__input signup-page__input--padded"
                   />
                   <button
@@ -165,7 +150,7 @@ export default function SignInPage() {
 
               <button
                 type="submit"
-                disabled={emailSubmitting}
+                disabled={emailSubmitting || !isSupabaseConfigured}
                 className="signup-page__submit-btn"
               >
                 {emailSubmitting ? 'Signing in…' : (
@@ -178,7 +163,6 @@ export default function SignInPage() {
                 )}
               </button>
             </form>
-          )}
         </div>
 
         <div className="signup-page__footer">
@@ -186,26 +170,7 @@ export default function SignInPage() {
           <Link to="/sign-up" className="signup-page__footer-link">Sign up</Link>
         </div>
 
-        <div className="signup-page__marquee-wrap">
-          <p className="signup-page__marquee-label">
-            Join 1,200+ businesses &amp; freelancers in 129+ countries
-          </p>
-          <div className="signup-page__marquee-track-wrap">
-            <div className="signup-page__marquee-track">
-              <div className="signup-page__marquee-inner">
-                {[...LOGOS, ...LOGOS, ...LOGOS].map((n, i) => (
-                  <span key={i} className="signup-page__marquee-slot">
-                    <img
-                      src={`/images/howItWorks/PartnerLogos/PLogo${n}.png`}
-                      alt={`Partner logo ${n}`}
-                      className="signup-page__marquee-logo"
-                    />
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+
       </div>
 
       <img src="/images/howItWorks/ObjAsset/Blueprintfull.png" aria-hidden="true" className="su-deco su-deco--1" />

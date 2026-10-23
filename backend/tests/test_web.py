@@ -53,3 +53,19 @@ def test_db_failure_does_not_leak_credentials():
     response = client.get('/api/jurisdictions')
     assert response.status_code == 503
     assert 'sensitive' not in response.text
+
+
+def test_health_reports_configuration_without_values(monkeypatch):
+    for name in ('SUPABASE_URL', 'SUPABASE_ANON_KEY', 'VITE_SUPABASE_URL',
+                 'VITE_SUPABASE_ANON_KEY', 'PERMIT_DATABASE_URL', 'OPENAI_API_KEY', 'OPENAI_MODEL'):
+        monkeypatch.delenv(name, raising=False)
+    assert client.get('/api/health').json() == {
+        'status': 'ok', 'service': 'preclear-permit-api', 'auth_configured': False,
+        'lookup_configured': False, 'chat_configured': False}
+    for name in ('VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY',
+                 'PERMIT_DATABASE_URL', 'OPENAI_API_KEY', 'OPENAI_MODEL'):
+        monkeypatch.setenv(name, 'secret-test-value')
+    response = client.get('/api/health')
+    assert response.json()['auth_configured'] is True
+    assert response.json()['chat_configured'] is True
+    assert 'secret-test-value' not in response.text

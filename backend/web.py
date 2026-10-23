@@ -40,6 +40,8 @@ def ready_repository():
 @app.get('/api/health')
 def health():
     return {'status': 'ok', 'service': 'preclear-permit-api',
+            'auth_configured': bool((os.environ.get('SUPABASE_URL') or os.environ.get('VITE_SUPABASE_URL'))
+                                    and (os.environ.get('SUPABASE_ANON_KEY') or os.environ.get('VITE_SUPABASE_ANON_KEY'))),
             'lookup_configured': bool(os.environ.get('PERMIT_DATABASE_URL')),
             'chat_configured': bool(os.environ.get('PERMIT_DATABASE_URL') and os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_MODEL'))}
 
