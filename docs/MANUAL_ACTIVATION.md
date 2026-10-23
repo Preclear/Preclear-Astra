@@ -1,6 +1,6 @@
 # Manual activation and known limits
 
-As of October 23, 2026, the owner confirms Supabase's database-size quota remains unresolved to avoid additional expense. No paid upgrade is requested. Stored municipal documents/chunks exist, but accessible coverage and the résumé's 50+ source-site count are unverified. The deployed interface is not proof of working database or model integration. Until the steps below succeed, Aura displays an unavailable state rather than fabricated answers.
+As of October 23, 2026, the owner confirms Supabase's database-size quota remains unresolved to avoid additional expense. No paid upgrade is requested. Stored municipal documents/chunks exist, but accessible coverage and the résumé's 50+ source-site count are unverified. The deployed interface is not proof of working database or model integration. Until the steps below succeed, Aura displays a limited-preview notice with a contact-for-access link rather than fabricated answers. The contact link requests a conversation; it does not automatically enable access or establish an active token allowance.
 
 ## 1. Restore data access within your chosen budget
 
@@ -51,4 +51,4 @@ Configure Supabase authentication for the production site and allowed redirect p
 5. Ask a question missing required attributes. Confirm clarification or jurisdiction verification, not a guessed approval.
 6. Verify /api/jurisdictions and /api/chat still reject unauthenticated requests. Record the date and result of a successful live lookup before claiming end-to-end readiness.
 
-If quota remains unresolved, stop at the unavailable state and retain the storage/data limitation in the portfolio. Do not call configuration-only health checks a successful model/database test.
+If quota remains unresolved, retain the limited-preview state and retain the storage/data limitation in the portfolio. Do not call configuration-only health checks a successful model/database test.
