@@ -19,7 +19,7 @@ or database secrets belong in `VITE_` environment variables. Missing service
 configuration returns a clear unavailable response; no scripted permit advice
 is substituted. Existing dashboard/report illustrations are not API results.
 
-See [architecture and deployment](docs/ARCHITECTURE.md).
+See [architecture and deployment](docs/ARCHITECTURE.md) and the [manual activation checklist and storage limitations](docs/MANUAL_ACTIVATION.md).
 
 ## Development
 
